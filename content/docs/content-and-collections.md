@@ -2,6 +2,7 @@
 Title = "Content & collections"
 Description = "Markdown with TOML front matter, and the list-plus-detail pattern."
 Order = 30
+Group = "Content & i18n"
 +++
 
 The `content` package reads markdown files with TOML front matter. Combined with
@@ -19,12 +20,33 @@ type Page struct {
 func Load(path string) (Page, error)
 func Parse(src string) (Page, error)
 func LoadDir(dir string) (map[string]Page, error)
+func LoadTree(dir string) (map[string]Page, error)
 func Slugs(pages map[string]Page) []string
 func Decode[T any](p Page) (T, error)
+func Chunk[T any](items []T, size int) [][]T
 ```
 
 `LoadDir` is non-recursive and reads `*.md` only, keyed by filename without the
 extension — the slug.
+
+`LoadTree` is the recursive one, keyed by path relative to `dir` without the
+extension: `content/blog/2024/hello.md` becomes `2024/hello`. Keys are
+slash-separated on every platform, and `Node.Children` keys may contain
+slashes — so a `LoadTree` result drops into a tree and nests itself:
+
+```go
+Generate: func() map[string]ssg.Node {
+	pages, _ := content.LoadTree("content/blog")
+	out := map[string]ssg.Node{}
+	for _, slug := range content.Slugs(pages) { // "2024/hello"
+		out[slug] = ssg.Node{Page: post(pages[slug])} // /blog/2024/hello/
+	}
+	return out
+},
+```
+
+Nothing is special-cased: `blog/index.md` is the key `blog/index`, like any
+other file.
 
 ## Front matter is yours
 
@@ -130,6 +152,41 @@ adding a markdown file adds a page and a tile with nothing else to update.
 Tile links should be bare slugs — `href="thing/"` — so they resolve relative to
 whichever index page they're on. The same tile then works at `/projects/` and
 `/de/projects/` with no prefix threading.
+
+## Paging a long collection
+
+`Chunk` splits a slice into groups of at most `size`, in order. That's all it
+does, and that's on purpose:
+
+```go
+func Chunk[T any](items []T, size int) [][]T
+```
+
+Turning those groups into pages is three lines, and every site wants them
+slightly differently — whether page one is the index or `/page/1/`, what the
+pager looks like, whether the URL says "page" at all. There's no repetition left
+to abstract there, so `Chunk` stops at the arithmetic:
+
+```go
+"blog": {
+	Page: index(pages[0]), // page one is the collection index
+	Generate: func() map[string]ssg.Node {
+		out := map[string]ssg.Node{}
+		for i, group := range content.Chunk(posts, 10) {
+			if i > 0 {
+				out["page/"+strconv.Itoa(i+1)] = ssg.Node{Page: index(group)}
+			}
+			for _, p := range group {
+				out[p.Slug] = ssg.Node{Title: p.Title, Page: post(p)}
+			}
+		}
+		return out
+	},
+},
+```
+
+A `size` of zero or less returns one group holding everything, so a site that
+hasn't decided on a page size yet doesn't have to special-case it.
 
 ## Markdown rendering
 

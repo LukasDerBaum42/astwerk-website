@@ -13,7 +13,7 @@ import (
 func buildOnce(t *testing.T) string {
 	t.Helper()
 	out := filepath.Join(t.TempDir(), "build")
-	if _, err := buildSite(out, "/astwerk", false); err != nil {
+	if _, err := buildSite(out, "/astwerk-website", false); err != nil {
 		t.Fatal(err)
 	}
 	return out
@@ -38,7 +38,7 @@ var urlAttr = regexp.MustCompile(`(?:href|src)="([^"]+)"`)
 
 // Every internal link must resolve to a real file from the directory of the page
 // that emitted it. This is the property that makes one build work at a localhost
-// root, under /astwerk/, and opened straight off disk.
+// root, under /astwerk-website/, and opened straight off disk.
 func TestInternalLinksResolveFromEachPage(t *testing.T) {
 	out := buildOnce(t)
 	pages := htmlFiles(t, out)
@@ -65,15 +65,38 @@ func TestInternalLinksResolveFromEachPage(t *testing.T) {
 				continue
 			}
 
-			target := filepath.Clean(filepath.Join(dir, u))
+			// A path can carry its own "#anchor" (a sidebar subsection link,
+			// say); only the path half needs to resolve to a file.
+			path, _, _ := strings.Cut(u, "#")
+			if path == "" {
+				continue
+			}
+
+			target := filepath.Clean(filepath.Join(dir, path))
 			if !strings.HasPrefix(target, out) {
 				t.Errorf("%s: %q escapes the output directory", rel, u)
 				continue
 			}
-			_, errFile := os.Stat(target)
-			_, errIndex := os.Stat(filepath.Join(target, "index.html"))
+			info, errFile := os.Stat(target)
+			indexPath := filepath.Join(target, "index.html")
+			_, errIndex := os.Stat(indexPath)
 			if errFile != nil && errIndex != nil {
 				t.Errorf("%s: %q does not resolve to anything", rel, u)
+				continue
+			}
+
+			if _, anchor, ok := strings.Cut(u, "#"); ok && anchor != "" {
+				dest := target
+				if errFile != nil || info.IsDir() {
+					dest = indexPath
+				}
+				page, err := os.ReadFile(dest)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !strings.Contains(string(page), `id="`+anchor+`"`) {
+					t.Errorf("%s: %q points at an anchor that doesn't exist in the target page", rel, u)
+				}
 			}
 		}
 	}
@@ -97,7 +120,7 @@ func TestCanonicalURLsAreAbsoluteAndBased(t *testing.T) {
 			continue
 		}
 		got := string(m[1])
-		if !strings.HasPrefix(got, "https://lukasderbaum42.github.io/astwerk/") {
+		if !strings.HasPrefix(got, "https://lukasderbaum42.github.io/astwerk-website/") {
 			t.Errorf("%s: canonical %q is missing the origin or base path", rel, got)
 		}
 	}
@@ -113,6 +136,14 @@ func TestExpectedPagesExist(t *testing.T) {
 		"docs/getting-started/index.html",
 		"docs/the-node-tree/index.html",
 		"examples/index.html",
+		"examples/counter/index.html",
+		"examples/list/index.html",
+		"examples/forms/index.html",
+		"examples/async/index.html",
+		"examples/canvas/index.html",
+		"examples/tree-and-content/index.html",
+		"examples/scripts-and-routing/index.html",
+		"examples/wasmwrap-and-templ/index.html",
 		"style/style.css",
 		"style/code.css",
 		"public/favicon.svg",
@@ -125,24 +156,32 @@ func TestExpectedPagesExist(t *testing.T) {
 	}
 }
 
-// The examples page is hydrated by scripts/demo.go, which finds its markup by
-// selector. If a data attribute is renamed in one place and not the other the
-// demo silently does nothing, so pin the contract.
+// Each live example page is hydrated by scripts/demo.go, which finds its
+// markup by selector. If a data attribute is renamed in one place and not the
+// other the demo silently does nothing, so pin the contract per page.
 func TestExamplesMarkupMatchesDemoSelectors(t *testing.T) {
 	out := buildOnce(t)
-	body, err := os.ReadFile(filepath.Join(out, "examples", "index.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	html := string(body)
 
-	for _, sel := range []string{
-		`id="counter"`, "data-count", "data-inc", "data-dec", "data-parity",
-		`id="todo"`, "data-form", "data-new", "data-list", "data-remaining",
-		`id="canvas-demo"`, "data-canvas", "data-toggle",
+	for page, selectors := range map[string][]string{
+		"counter": {`id="counter"`, "data-count", "data-inc", "data-dec", "data-parity"},
+		"list":    {`id="todo"`, "data-form", "data-new", "data-list", "data-remaining"},
+		"forms":   {`id="form-demo"`, "data-name", "data-subscribe", "data-summary", "data-thanks"},
+		"async":   {`id="async-demo"`, "data-reload", "data-status", "data-posts"},
+		"canvas":  {`id="canvas-demo"`, "data-canvas", "data-toggle"},
 	} {
-		if !strings.Contains(html, sel) {
-			t.Errorf("examples page is missing %s, which scripts/demo.go hydrates", sel)
+		body, err := os.ReadFile(filepath.Join(out, "examples", page, "index.html"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		html := string(body)
+
+		for _, sel := range selectors {
+			if !strings.Contains(html, sel) {
+				t.Errorf("examples/%s is missing %s, which scripts/demo.go hydrates", page, sel)
+			}
+		}
+		if !strings.Contains(html, `data-wasm=`) {
+			t.Errorf("examples/%s doesn't load the demo WASM module", page)
 		}
 	}
 }
@@ -204,67 +243,54 @@ func TestDocsAreOrdered(t *testing.T) {
 	}
 }
 
-// Every chroma rule must sit inside a prefers-color-scheme media query.
-//
-// The two chroma styles do not cover the same token classes: github styles .nx
-// and .p — plain identifiers and punctuation, most of any Go snippet — as
-// near-black, and github-dark has no rule for them. An unscoped light block
-// therefore survives into dark mode and renders code at roughly 1.2:1 contrast,
-// which is what "dark gray on a dark background" looks like.
-func TestCodeCSSIsScopedPerColorScheme(t *testing.T) {
+// The site's theme is a manual [data-theme] toggle (dark by default), not
+// prefers-color-scheme — so code.css has to switch on the same signal or a
+// visitor who toggles to light against a dark OS preference gets dark code
+// blocks on a light page. Every light rule must be scoped to
+// [data-theme="light"], and the unscoped default (what renders with no
+// attribute at all) must be the dark palette.
+func TestCodeCSSIsScopedByThemeAttribute(t *testing.T) {
 	css, err := os.ReadFile(filepath.Join("style", "code.css"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	body := string(css)
 
-	var depth int
-	var leaked []string
-	for _, line := range strings.Split(string(css), "\n") {
-		trimmed := strings.TrimSpace(line)
-		switch {
-		case strings.HasPrefix(trimmed, "@media"):
-			if !strings.Contains(trimmed, "prefers-color-scheme") {
-				t.Errorf("unexpected media query in code.css: %s", trimmed)
-			}
-			depth++
-		case trimmed == "}" && depth > 0:
-			depth--
-		case depth == 0 && strings.Contains(trimmed, ".chroma"):
-			leaked = append(leaked, trimmed)
-		}
+	if strings.Contains(body, "@media") {
+		t.Error("code.css still has a media query; the site's theme is a manual [data-theme] toggle, not prefers-color-scheme")
 	}
-	if len(leaked) > 0 {
-		t.Errorf("%d chroma rules sit outside a colour-scheme media query, so they "+
-			"leak between light and dark:\n  %s", len(leaked), strings.Join(leaked, "\n  "))
+	if !strings.Contains(body, `[data-theme="light"] .chroma {`) {
+		t.Error(`code.css has no [data-theme="light"] .chroma rule — light mode would show dark code blocks`)
 	}
 
-	// Both schemes must actually be present.
-	for _, want := range []string{
-		"@media (prefers-color-scheme: dark)",
-		"@media not all and (prefers-color-scheme: dark)",
-	} {
-		if !strings.Contains(string(css), want) {
-			t.Errorf("code.css is missing %q", want)
-		}
+	// The first .chroma rule (there are many, one per token class) is the
+	// unscoped default. It must not itself be scoped to a data-theme
+	// attribute, since the whole point is that dark renders with none.
+	i := strings.Index(body, ".chroma {")
+	if i < 0 {
+		t.Fatal("no .chroma rule in code.css")
+	}
+	line := body[:i]
+	if start := strings.LastIndex(line, "\n"); start >= 0 {
+		line = line[start+1:]
+	}
+	if strings.Contains(line, "data-theme") {
+		t.Error("the first .chroma rule is scoped to a data-theme attribute; the unscoped default should be dark")
 	}
 }
 
-// The dark block must set a base colour on .chroma, since unstyled tokens
-// inherit it rather than having a rule of their own.
+// The default (unscoped) block is dark and must set a base colour on
+// .chroma, since unstyled tokens inherit it rather than having a rule of
+// their own.
 func TestDarkCodeHasReadableBaseColor(t *testing.T) {
 	css, err := os.ReadFile(filepath.Join("style", "code.css"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	i := strings.Index(string(css), "@media (prefers-color-scheme: dark)")
-	if i < 0 {
-		t.Fatal("no dark block")
-	}
-	dark := string(css)[i:]
 
-	m := regexp.MustCompile(`\.chroma \{([^}]*)\}`).FindStringSubmatch(dark)
+	m := regexp.MustCompile(`(?m)^\s*(?:/\*.*?\*/\s*)?\.chroma \{([^}]*)\}`).FindStringSubmatch(string(css))
 	if m == nil {
-		t.Fatal("dark block has no .chroma rule")
+		t.Fatal("no unscoped default .chroma rule")
 	}
 
 	// Split into declarations rather than regexping for "color:", which also

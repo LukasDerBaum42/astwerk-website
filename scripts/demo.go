@@ -11,6 +11,7 @@ import (
 	"math"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/LukasDerBaum42/astwerk/reactive"
 	"github.com/LukasDerBaum42/astwerk/wasmwrap"
@@ -19,6 +20,8 @@ import (
 func main() {
 	counter()
 	todoList()
+	formDemo()
+	asyncDemo()
 	canvasDemo()
 
 	// Keep the module alive: main returning would tear down every handler.
@@ -108,6 +111,73 @@ func todoList() {
 				})
 				return row.Append(text, remove)
 			})
+	})
+}
+
+// formDemo two-way binds a text field and a checkbox, and drives a computed
+// summary and a conditional panel from the same two signals.
+func formDemo() {
+	reactive.Hydrate("#form-demo", func(root wasmwrap.Element) {
+		name := reactive.NewSignal("")
+		subscribed := reactive.NewSignal(false)
+
+		reactive.BindValue(root.Find("[data-name]"), name)
+		reactive.BindChecked(root.Find("[data-subscribe]"), subscribed)
+
+		reactive.BindText(root.Find("[data-summary]"), func() string {
+			n := name.Get()
+			if n == "" {
+				n = "there"
+			}
+			if subscribed.Get() {
+				return "Hi " + n + " — you're on the list."
+			}
+			return "Hi " + n + " — not subscribed yet."
+		})
+
+		// BindShow, not BindWhen: the panel keeps no state worth discarding, so
+		// toggling visibility is all this needs.
+		reactive.BindShow(root.Find("[data-thanks]"), subscribed.Get)
+	})
+}
+
+type post struct {
+	ID    string
+	Title string
+}
+
+// asyncDemo drives a Resource from a loader that stands in for a network call,
+// binding its Loading/Err/Data signals and reloading on demand.
+func asyncDemo() {
+	reactive.Hydrate("#async-demo", func(root wasmwrap.Element) {
+		posts := reactive.NewResource(func() ([]post, error) {
+			time.Sleep(500 * time.Millisecond) // stands in for wasmwrap.Fetch
+			return []post{
+				{ID: "1", Title: "Signals track their own dependencies"},
+				{ID: "2", Title: "Keyed lists move nodes instead of rebuilding them"},
+				{ID: "3", Title: "A binding owns exactly the property it writes"},
+			}, nil
+		})
+
+		reactive.BindText(root.Find("[data-status]"), func() string {
+			if posts.Loading.Get() {
+				return "Loading…"
+			}
+			if err := posts.Err.Get(); err != nil {
+				return "Error: " + err.Error()
+			}
+			return strconv.Itoa(len(posts.Data.Get())) + " posts loaded"
+		})
+
+		reactive.BindList(root.Find("[data-posts]"), posts.Data.Get,
+			func(p post) string { return p.ID },
+			func(p post) wasmwrap.Element {
+				return wasmwrap.Create("li").SetText(p.Title)
+			})
+
+		reactive.On(root.Find("[data-reload]"), "click", func(wasmwrap.Event) {
+			posts.Reload()
+		})
 	})
 }
 

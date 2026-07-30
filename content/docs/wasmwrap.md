@@ -2,6 +2,7 @@
 Title = "wasmwrap"
 Description = "syscall/js made to feel like Go: DOM, style, events, fetch, canvas."
 Order = 60
+Group = "Client-side"
 +++
 
 `syscall/js` works, but every call is a stringly-typed `js.Value.Call` and

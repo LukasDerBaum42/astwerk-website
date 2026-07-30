@@ -1,7 +1,7 @@
 package pages
 
 import (
-	"github.com/LukasDerBaum42/astwerk/site/templates"
+	"github.com/LukasDerBaum42/astwerk-website/templates"
 	"github.com/LukasDerBaum42/astwerk/ssg"
 )
 
@@ -9,8 +9,8 @@ import (
 //
 // body is HTML that goldmark already produced from markdown, so it goes through
 // templ.Raw rather than being escaped.
-templ DocPage(c ssg.Ctx, sidebar []templates.NavItem, description string, body string, prev, next *templates.NavItem) {
-	@templates.Layout(c, sidebar) {
+templ DocPage(c ssg.Ctx, sidebar []templates.NavGroup, description string, body string, prev, next *templates.NavItem) {
+	@templates.Layout(c, "Documentation", sidebar) {
 		<article class="prose">
 			<h1>{ c.Title }</h1>
 			if description != "" {
@@ -34,8 +34,8 @@ templ DocPage(c ssg.Ctx, sidebar []templates.NavItem, description string, body s
 }
 
 // DocsIndex lists every documentation page with its summary.
-templ DocsIndex(c ssg.Ctx, sidebar []templates.NavItem, entries []DocSummary) {
-	@templates.Layout(c, sidebar) {
+templ DocsIndex(c ssg.Ctx, sidebar []templates.NavGroup, entries []DocSummary) {
+	@templates.Layout(c, "Documentation", sidebar) {
 		<article class="prose">
 			<h1>Documentation</h1>
 			<p class="lede">
@@ -60,7 +60,7 @@ type DocSummary struct {
 }
 
 templ NotFound(c ssg.Ctx) {
-	@templates.Layout(c, nil) {
+	@templates.Layout(c, "", nil) {
 		<article class="prose">
 			<h1>404</h1>
 			<p>That page doesn't exist.</p>

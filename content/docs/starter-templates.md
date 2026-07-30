@@ -2,6 +2,7 @@
 Title = "Starter templates"
 Description = "Thirteen copyable .templ files. Copied, never imported."
 Order = 80
+Group = "Reference"
 +++
 
 `starter/` is boilerplate to copy, not a library to import. Nothing in `ssg` or

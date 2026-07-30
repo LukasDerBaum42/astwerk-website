@@ -2,6 +2,7 @@
 Title = "Getting started"
 Description = "Install astwerk, write a tree, generate a site."
 Order = 10
+Group = "Start here"
 +++
 
 astwerk generates a static site from a Go program. You write a tree describing

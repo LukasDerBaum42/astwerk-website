@@ -1,1 +1,6 @@
 build/
+*.wasm
+
+# Local workspace for building against an unreleased astwerk next door.
+go.work
+go.work.sum

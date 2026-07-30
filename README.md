@@ -1,33 +1,64 @@
-# site/
+# astwerk-website
 
-The astwerk documentation site, built with astwerk.
+The [astwerk](https://github.com/LukasDerBaum42/astwerk) documentation site,
+built with astwerk. Deployed to
+<https://lukasderbaum42.github.io/astwerk-website/>.
 
-It is a **nested Go module** with a `replace` pointing at the parent, so it always
-builds against the working tree rather than a published tag. That makes it a
-dogfooding check: if a change breaks the library's own documentation site, the
-site stops building. It also keeps the site's dependencies — chroma, goldmark
-extensions — out of the library's `go.mod`, so consumers never see them.
+It lives in its own repository so the library stays a library: the site's
+dependencies — chroma, the goldmark extensions — never reach anyone who
+`go get`s astwerk, and the library's module has nothing in it but the library.
+
+It depends on a **published tag** of astwerk, like any other consumer would.
+That's the point: if the site builds, the released API is usable as released.
 
 ## Building
 
 ```bash
 templ generate          # or: go run github.com/a-h/templ/cmd/templ@v0.3.1020 generate
-go run .                # into build/, base path /astwerk
+go run .                # into build/, base path /astwerk-website
+go run . -serve         # build, serve on :8080, rebuild and reload on change
 go run . -dev           # keep existing output, overwrite in place
-go run . -base ""       # for a domain root instead of /astwerk
+go run . -base ""       # for a domain root instead of /astwerk-website
+```
+
+`-serve` is the one to leave running while writing docs — it watches the
+sources, rebuilds, and reloads the browser.
+
+## Building against unreleased astwerk
+
+To try a library change before tagging it, use a Go workspace rather than
+editing `go.mod` — `go.work` is gitignored, so it can't be committed by
+accident:
+
+```bash
+go work init . ../astwerk
+go run .
+rm go.work            # back to the published tag
+```
+
+A workspace overrides where the module is *read from*, but not whether its
+required version exists: Go still resolves the `require` line against the
+registry. So the version in `go.mod` has to be a tag that has been pushed, even
+when a workspace is redirecting the code to a sibling checkout.
+
+Bumping to a new release is the ordinary thing:
+
+```bash
+go get github.com/LukasDerBaum42/astwerk@v0.6.0
+go mod tidy
 ```
 
 ## Previewing
 
-Every in-page URL is relative (`RelativeURLs: true`), so the output is portable —
-serve it any way you like:
+`go run . -serve` is the normal way. Every in-page URL is relative
+(`RelativeURLs: true`), so the output is portable and anything else works too:
 
 ```bash
 cd build && python3 -m http.server 8000   # http://localhost:8000/
 ```
 
-Opening `build/index.html` straight off disk works too. So does serving it under
-`/astwerk/`. Same build, no flags.
+Opening `build/index.html` straight off disk works. So does serving it under
+`/astwerk-website/`. Same build, no flags.
 
 `BaseURL` is still set, but only feeds `Ctx.URL` for canonical tags and Open
 Graph, which have to be absolute.

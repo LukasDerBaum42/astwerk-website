@@ -9,7 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"github.com/LukasDerBaum42/astwerk/site/templates"
+	"github.com/LukasDerBaum42/astwerk-website/templates"
 	"github.com/LukasDerBaum42/astwerk/ssg"
 )
 
@@ -17,7 +17,7 @@ import (
 //
 // body is HTML that goldmark already produced from markdown, so it goes through
 // templ.Raw rather than being escaped.
-func DocPage(c ssg.Ctx, sidebar []templates.NavItem, description string, body string, prev, next *templates.NavItem) templ.Component {
+func DocPage(c ssg.Ctx, sidebar []templates.NavGroup, description string, body string, prev, next *templates.NavItem) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -164,7 +164,7 @@ func DocPage(c ssg.Ctx, sidebar []templates.NavItem, description string, body st
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = templates.Layout(c, sidebar).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templates.Layout(c, "Documentation", sidebar).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -173,7 +173,7 @@ func DocPage(c ssg.Ctx, sidebar []templates.NavItem, description string, body st
 }
 
 // DocsIndex lists every documentation page with its summary.
-func DocsIndex(c ssg.Ctx, sidebar []templates.NavItem, entries []DocSummary) templ.Component {
+func DocsIndex(c ssg.Ctx, sidebar []templates.NavGroup, entries []DocSummary) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -261,7 +261,7 @@ func DocsIndex(c ssg.Ctx, sidebar []templates.NavItem, entries []DocSummary) tem
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = templates.Layout(c, sidebar).Render(templ.WithChildren(ctx, templ_7745c5c3_Var10), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templates.Layout(c, "Documentation", sidebar).Render(templ.WithChildren(ctx, templ_7745c5c3_Var10), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -328,7 +328,7 @@ func NotFound(c ssg.Ctx) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = templates.Layout(c, nil).Render(templ.WithChildren(ctx, templ_7745c5c3_Var15), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templates.Layout(c, "", nil).Render(templ.WithChildren(ctx, templ_7745c5c3_Var15), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  site:
+    name: Site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: go.sum
+
+      - name: Check generated templ is current
+        run: |
+          go run github.com/a-h/templ/cmd/templ@v0.3.1020 generate
+          if ! git diff --quiet; then
+            echo "templ output is stale — run 'templ generate' and commit:"
+            git diff --stat
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt'd:"; echo "$unformatted"; exit 1
+          fi
+
+      # Builds the site and walks every generated page, resolving each link
+      # against the directory it was emitted from. Catches a broken link, an
+      # absolute URL that would break under /astwerk-website/, and demo markup
+      # drifting out of sync with the selectors scripts/demo.go hydrates.
+      - name: Test
+        run: go test ./...

@@ -2,6 +2,7 @@
 Title = "reactive"
 Description = "Signals, fine-grained DOM bindings, keyed lists, routing, async data."
 Order = 70
+Group = "Client-side"
 +++
 
 `reactive` is opt-in state management on top of `wasmwrap`. It is fine-grained
@@ -259,3 +260,65 @@ table. Wrong for anything the user interacts with.
 Go on js/wasm runs one goroutine at a time, so signals need no locking. A
 goroutine may still write one — that's how `Resource` reports its result — and the
 effects it triggers run on that goroutine.
+
+## Testing your bindings
+
+`GOOS=js GOARCH=wasm go test` runs under node, which has no DOM. The `jsdom`
+package is one: a small fake DOM that astwerk's own tests run against, exported
+so yours can too. No browser, no headless driver, no separate test runner.
+
+```go
+//go:build js && wasm
+
+package main
+
+import (
+	"strconv"
+	"testing"
+
+	"github.com/LukasDerBaum42/astwerk/jsdom"
+	"github.com/LukasDerBaum42/astwerk/reactive"
+	"github.com/LukasDerBaum42/astwerk/wasmwrap"
+)
+
+func init() { jsdom.Install() }
+
+func TestCounterIncrements(t *testing.T) {
+	jsdom.Reset()
+	root := wasmwrap.Wrap(jsdom.NewElement("div"))
+
+	count := reactive.NewSignal(0)
+	label := wasmwrap.Create("span")
+	reactive.BindText(label, func() string { return strconv.Itoa(count.Get()) })
+	root.Append(label)
+
+	count.Set(3)
+	if got := label.Text(); got != "3" {
+		t.Errorf("label = %q, want \"3\"", got)
+	}
+}
+```
+
+Run it with the toolchain's own runner on `PATH`:
+
+```sh
+export PATH="$PATH:$(go env GOROOT)/lib/wasm"
+GOOS=js GOARCH=wasm go test ./...
+```
+
+`Install` defines `document`, `location`, `history` and
+`requestAnimationFrame` on `globalThis`; calling it twice is harmless. `Reset`
+gives each test a clean `document.body`. `NewElement` makes a detached element
+to mount into.
+
+It also adds a few things a real DOM doesn't have, for assertions:
+`el.listenerCount(type)`, `el.dispatch(type, props)` to fire an event,
+`el._tree` for the subtree's text in order, and `el._ctxCalls` recording what a
+2D canvas context was asked to draw.
+
+Know what it isn't. It's not a browser, and it will never grow into one —
+layout, the CSS cascade, focus and paint are out of scope by design. Selectors
+are limited to `#id`, `.class`, `[attr]` and a bare tag name. It's there to
+answer "did my Go code reach for the right property with the right arguments",
+which is the question a binding test is actually asking. Anything that only a
+real DOM can settle needs a real browser.

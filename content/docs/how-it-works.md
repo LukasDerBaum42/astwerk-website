@@ -2,6 +2,7 @@
 Title = "How it works"
 Description = "The walker, locale derivation, and dependency tracking — the three mechanisms, in full."
 Order = 90
+Group = "Reference"
 +++
 
 astwerk has three moving parts worth understanding. None of them is large; all of
@@ -32,6 +33,22 @@ Children are visited in sorted key order. That's deliberate: a build is
 reproducible, and when something fails you get the same node reported every time
 rather than whichever the map handed over first.
 
+### Parallelism
+
+`BuildOptions.Parallel` fans siblings out across goroutines instead. Nodes write
+to disjoint paths and share nothing, so the output is identical either way — and
+errors are still collected by index and returned in sorted order, so a failure
+names the same node whether you built in parallel or not.
+
+It's opt-in for one reason: it moves *your* code onto other goroutines. Rendering
+a templ component is safe; a `Generate` closure appending to a captured slice is
+not. Making that a silent default would turn a routine upgrade into a data race,
+so you say when you want it.
+
+`CompileScripts` doesn't ask. Each `.wasm` is built by its own `go build`
+process writing its own file — nothing of yours runs in astwerk's address
+space — so there's no race to opt out of, and it's always parallel.
+
 ### Failure
 
 Errors propagate immediately, wrapped with the path being written:
@@ -55,8 +72,11 @@ languages and served from the site root, so inheriting them would produce
 subtree mirrors *pages*, not assets. Branches that end up with nothing to render
 are pruned.
 
-Overrides then replace nodes at a path, applied shallowest-first so an override of
-`projects` lands before one of `projects/foo`. Locale identity is carried on an
+Overrides then patch nodes at a path, applied shallowest-first so an override of
+`projects` lands before one of `projects/foo`. Each override is a
+`func(ssg.Node) ssg.Node` handed the derived node, which is why patching one
+field doesn't drop the rest and why the locale root needs no special case —
+`n` already holds the inherited children. Locale identity is carried on an
 unexported field of the locale's root node and inherited downward by the walker,
 which is how a page five levels deep still knows its prefix.
 
@@ -133,7 +153,7 @@ very entries it was reusing.
 
 ## This site
 
-Built with astwerk, source in [`site/`](https://github.com/LukasDerBaum42/astwerk/tree/master/site).
+Built with astwerk, source at [astwerk-website](https://github.com/LukasDerBaum42/astwerk-website).
 It's a nested Go module with a `replace` pointing at the parent, so it always
 builds against the working tree — if a change breaks the library's own
 documentation site, the site stops building.

@@ -2,6 +2,7 @@
 Title = "The Node tree"
 Description = "Node, Build, Ctx — the entire mechanism for generating a site."
 Order = 20
+Group = "Start here"
 +++
 
 A `Node` describes one directory in the output. `Build` walks the tree from the
@@ -194,15 +195,24 @@ root := ssg.Node{
 
 ```go
 type BuildOptions struct {
-	OutDir  string // default "build"
-	Dev     bool   // skip the clean, overwrite in place
-	BaseURL string // "/astwerk" when served from a subdirectory
+	OutDir       string // default "build"
+	Dev          bool   // skip the clean, overwrite in place
+	BaseURL      string // "/astwerk" when served from a subdirectory
+	RelativeURLs bool   // emit URLs relative to each page
+	Parallel     bool   // render sibling nodes concurrently
 }
 ```
 
 `Dev` exists so a running dev server doesn't have the ground pulled out from
 under it. Without it, `Build` removes `OutDir` first, so a renamed page can't
 leave a stale file behind.
+
+`Parallel` renders siblings across goroutines, bounded by `GOMAXPROCS`. The
+output and the error reporting are identical either way — the only thing that
+changes is wall time, and only on a site with enough pages to notice. It's
+opt-in because it runs *your* `Page`, `Files` and `Generate` functions
+concurrently: rendering templ components is safe, a `Generate` closure appending
+to a captured slice is not.
 
 ## When the tree isn't enough
 

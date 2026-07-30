@@ -1,12 +1,12 @@
 package pages
 
 import (
-	"github.com/LukasDerBaum42/astwerk/site/templates"
+	"github.com/LukasDerBaum42/astwerk-website/templates"
 	"github.com/LukasDerBaum42/astwerk/ssg"
 )
 
 templ Home(c ssg.Ctx) {
-	@templates.Layout(c, nil) {
+	@templates.Layout(c, "", nil) {
 		<section class="hero">
 			<h1>astwerk</h1>
 			<p class="tagline">
@@ -65,7 +65,10 @@ templ Home(c ssg.Ctx) {
 				<li>You want a virtual DOM. Bindings patch one property at a time.</li>
 				<li>You want a themes ecosystem. There is a folder of files you copy and edit.</li>
 			</ul>
+			<p>
+				<a href={ c.Link("docs/comparison/") }>Full comparison against Hugo, Zola, Eleventy and Astro &rarr;</a>
 		</section>
+			</p>
 	}
 }
 

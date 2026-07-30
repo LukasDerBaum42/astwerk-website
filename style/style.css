@@ -1,28 +1,33 @@
 /* astwerk docs — one file, no preprocessor, no framework. */
 
+/* Dark is the unconditional default — not tied to prefers-color-scheme — so
+   [data-theme="light"] is the only override. The toggle script in layout.templ
+   sets that attribute from localStorage before paint, so there's no flash. */
 :root {
+	--bg: #15171b;
+	--bg-raised: #1a1d22;
+	--fg: #e6e8ec;
+	--muted: #9aa2b1;
+	--line: #2a2e36;
+	--accent: #8ea6ff;
+	--accent-soft: #1e2433;
+	--code-bg: #1c1f25;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.24);
+	--radius: 8px;
+	--mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+	--sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+[data-theme="light"] {
 	--bg: #fbfbfc;
+	--bg-raised: #ffffff;
 	--fg: #1b1d21;
 	--muted: #5c626e;
 	--line: #e3e5ea;
 	--accent: #3355d1;
 	--accent-soft: #eef1fd;
 	--code-bg: #f5f6f8;
-	--radius: 8px;
-	--mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
-	--sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--bg: #15171b;
-		--fg: #e6e8ec;
-		--muted: #9aa2b1;
-		--line: #2a2e36;
-		--accent: #8ea6ff;
-		--accent-soft: #1e2433;
-		--code-bg: #1c1f25;
-	}
+	--shadow: 0 1px 2px rgba(30, 34, 42, 0.06), 0 8px 24px rgba(30, 34, 42, 0.08);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -35,6 +40,7 @@ body {
 	color: var(--fg);
 	font: 16px/1.65 var(--sans);
 	-webkit-text-size-adjust: 100%;
+	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
@@ -49,6 +55,15 @@ code {
 }
 
 pre code { background: none; padding: 0; }
+
+.code, pre.chroma {
+	margin: 1.1rem 0;
+	border-radius: var(--radius);
+	overflow-x: auto;
+	box-shadow: var(--shadow);
+}
+.code pre.chroma { margin: 0; box-shadow: none; }
+.chroma { padding: 1rem 1.1rem !important; }
 
 .skip {
 	position: absolute;
@@ -90,7 +105,7 @@ pre code { background: none; padding: 0; }
 }
 .brand .mark { color: var(--accent); }
 
-.topnav { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+.topnav { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
 .topnav a {
 	color: var(--muted);
 	text-decoration: none;
@@ -98,6 +113,25 @@ pre code { background: none; padding: 0; }
 }
 .topnav a:hover { color: var(--fg); }
 .topnav a[aria-current] { color: var(--fg); font-weight: 600; }
+
+.theme-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	background: var(--bg-raised);
+	color: var(--fg);
+	cursor: pointer;
+	font-size: 1rem;
+	line-height: 1;
+}
+.theme-toggle:hover { border-color: var(--accent); }
+.theme-toggle::before { content: "\2600"; } /* ☀ — click to go light */
+[data-theme="light"] .theme-toggle::before { content: "\1F319"; } /* 🌙 — click to go dark */
 
 /* --- Layout --- */
 
@@ -120,30 +154,57 @@ main.wide { max-width: 56rem; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 	color: var(--muted);
-	margin: 0 0 0.6rem;
+	margin: 0 0 0.9rem;
 	font-weight: 650;
 }
-.sidebar nav { display: flex; flex-direction: column; gap: 0.1rem; }
-.sidebar nav a {
+.sidebar-group { display: flex; flex-direction: column; gap: 0.1rem; margin-bottom: 1.1rem; }
+.sidebar-group:last-child { margin-bottom: 0; }
+.sidebar-group-title {
+	font-size: 0.7rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--muted);
+	opacity: 0.75;
+	margin: 0 0 0.3rem 0.6rem;
+	font-weight: 600;
+}
+.sidebar-group a {
 	color: var(--muted);
 	text-decoration: none;
 	padding: 0.34rem 0.6rem;
 	border-radius: 6px;
 	font-size: 0.92rem;
 	border-left: 2px solid transparent;
+	transition: background-color 0.1s ease, color 0.1s ease;
 }
-.sidebar nav a:hover { color: var(--fg); background: var(--accent-soft); }
-.sidebar nav a.active {
+.sidebar-group a:hover { color: var(--fg); background: var(--accent-soft); }
+.sidebar-group a.active {
 	color: var(--accent);
 	background: var(--accent-soft);
 	font-weight: 600;
 	border-left-color: var(--accent);
 }
 
+.sidebar-sub {
+	list-style: none;
+	margin: 0.1rem 0 0.3rem;
+	padding: 0;
+	border-left: 1px solid var(--line);
+	margin-left: 0.9rem;
+}
+.sidebar-sub a {
+	display: block;
+	color: var(--muted);
+	text-decoration: none;
+	font-size: 0.85rem;
+	padding: 0.25rem 0 0.25rem 0.7rem;
+}
+.sidebar-sub a:hover { color: var(--fg); }
+
 @media (max-width: 800px) {
 	.with-sidebar { grid-template-columns: 1fr; gap: 1.5rem; }
 	.sidebar { position: static; }
-	.sidebar nav { flex-flow: row wrap; }
+	.sidebar-group { flex-flow: row wrap; }
 }
 
 /* --- Prose --- */
@@ -213,8 +274,9 @@ ul.plain { padding-left: 1.1rem; }
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
 	max-width: 48%;
+	transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
 }
-.pager a:hover { border-color: var(--accent); }
+.pager a:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
 .pager a span {
 	font-size: 0.75rem;
 	font-weight: 500;
@@ -231,6 +293,10 @@ ul.plain { padding-left: 1.1rem; }
 	font-size: clamp(2.6rem, 7vw, 4rem);
 	margin: 0 0 0.6rem;
 	letter-spacing: -0.035em;
+	background: linear-gradient(135deg, var(--fg), var(--accent));
+	background-clip: text;
+	-webkit-background-clip: text;
+	color: transparent;
 }
 .tagline { font-size: 1.2rem; color: var(--muted); max-width: 36rem; }
 .install {
@@ -240,6 +306,7 @@ ul.plain { padding-left: 1.1rem; }
 	padding: 0.8rem 1rem;
 	overflow-x: auto;
 	max-width: 36rem;
+	box-shadow: var(--shadow);
 }
 .cta { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 1.6rem; }
 .button {
@@ -250,13 +317,14 @@ ul.plain { padding-left: 1.1rem; }
 	border-radius: var(--radius);
 	text-decoration: none;
 	font-weight: 600;
+	transition: filter 0.12s ease, transform 0.12s ease;
 }
 .button.ghost {
 	background: none;
 	color: var(--accent);
 	border: 1px solid var(--accent);
 }
-.button:hover { filter: brightness(1.08); }
+.button:hover { filter: brightness(1.12); transform: translateY(-1px); }
 
 .law blockquote {
 	font-size: 1.1rem;
@@ -278,9 +346,10 @@ ul.plain { padding-left: 1.1rem; }
 	border-radius: var(--radius);
 	text-decoration: none;
 	color: inherit;
-	background: var(--bg);
+	background: var(--bg-raised);
+	transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
 }
-.card:hover { border-color: var(--accent); }
+.card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-2px); }
 .card h3 { margin: 0 0 0.4rem; font-size: 1rem; }
 .card h3 code { color: var(--accent); font-size: 0.85em; }
 .card p { margin: 0; color: var(--muted); font-size: 0.92rem; max-width: none; }
@@ -293,16 +362,18 @@ ul.plain { padding-left: 1.1rem; }
 	padding: 1.2rem;
 	margin: 1.2rem 0;
 	background: var(--code-bg);
+	box-shadow: var(--shadow);
 }
 .demo button {
 	font: inherit;
 	font-size: 0.95rem;
 	padding: 0.35rem 0.85rem;
 	border: 1px solid var(--line);
-	background: var(--bg);
+	background: var(--bg-raised);
 	color: var(--fg);
 	border-radius: 6px;
 	cursor: pointer;
+	transition: border-color 0.1s ease, color 0.1s ease;
 }
 .demo button:hover { border-color: var(--accent); color: var(--accent); }
 .demo input {
@@ -325,6 +396,8 @@ ul.plain { padding-left: 1.1rem; }
 .demo-note { color: var(--muted); font-size: 0.88rem; margin: 0.7rem 0 0; }
 .demo form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .demo canvas { width: 100%; height: 200px; display: block; border-radius: 6px; }
+.demo label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.demo p { margin: 0.6rem 0; }
 
 .todo-list { list-style: none; padding: 0; margin: 1rem 0 0; }
 .todo-list li { display: flex; gap: 0.5rem; margin-bottom: 0.4rem; }

@@ -2,6 +2,7 @@
 Title = "Scripts & WebAssembly"
 Description = "Compiling Go to wasm as part of the build, with no JS toolchain."
 Order = 50
+Group = "Client-side"
 +++
 
 A node with `CompileFrom` compiles a scripts directory into its output
