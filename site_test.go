@@ -156,12 +156,18 @@ func TestExpectedPagesExist(t *testing.T) {
 		"examples/counter/index.html",
 		"examples/list/index.html",
 		"examples/forms/index.html",
+		"examples/bindings/index.html",
 		"examples/async/index.html",
 		"examples/canvas/index.html",
 		"examples/templ-basics/index.html",
 		"examples/tree-and-content/index.html",
 		"examples/scripts-and-routing/index.html",
 		"examples/wasmwrap-and-templ/index.html",
+		"examples/x-async/index.html",
+		"examples/x-canvas/index.html",
+		"examples/x-faq/index.html",
+		"examples/stopwatch/index.html",
+		"examples/filter/index.html",
 		"style/style.css",
 		"style/code.css",
 		"public/favicon.svg",
@@ -187,6 +193,9 @@ func TestXExamplesAreSelfContained(t *testing.T) {
 		"examples/x-forms/index.html",
 		"examples/x-bindings/index.html",
 		"examples/x-todo/index.html",
+		"examples/x-async/index.html",
+		"examples/x-canvas/index.html",
+		"examples/x-faq/index.html",
 		"examples/x-under-the-hood/index.html",
 		"tutorial/8-interactivity/index.html",
 	} {
@@ -218,11 +227,14 @@ func TestExamplesMarkupMatchesDemoSelectors(t *testing.T) {
 	out := buildOnce(t)
 
 	for page, selectors := range map[string][]string{
-		"counter": {`id="counter"`, "data-count", "data-inc", "data-dec", "data-parity"},
-		"list":    {`id="todo"`, "data-form", "data-new", "data-list", "data-remaining"},
-		"forms":   {`id="form-demo"`, "data-name", "data-subscribe", "data-summary", "data-thanks"},
-		"async":   {`id="async-demo"`, "data-reload", "data-status", "data-posts"},
-		"canvas":  {`id="canvas-demo"`, "data-canvas", "data-toggle"},
+		"counter":   {`id="counter"`, "data-count", "data-inc", "data-dec", "data-reset", "data-doubled"},
+		"list":      {`id="todo"`, "data-form", "data-new", "data-list", "data-remaining"},
+		"forms":     {`id="form-demo"`, "data-price", "data-qty", "data-total", "data-tax", "data-tax-note"},
+		"bindings":  {`id="bindings-demo"`, "data-bind-href", "data-bind-class", "data-bind-disabled", "data-bind-style", "data-toggle-class", "data-toggle-disabled", "data-recolour", "data-retarget"},
+		"async":     {`id="async-demo"`, "data-reload", "data-status", "data-posts"},
+		"canvas":    {`id="canvas-demo"`, "data-canvas", "data-toggle"},
+		"stopwatch": {`id="stopwatch-demo"`, "data-time", "data-start", "data-reset"},
+		"filter":    {`id="filter-demo"`, "data-query", "data-count", "data-results"},
 	} {
 		body, err := os.ReadFile(filepath.Join(out, "examples", page, "index.html"))
 		if err != nil {

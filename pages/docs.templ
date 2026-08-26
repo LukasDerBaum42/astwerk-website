@@ -33,23 +33,34 @@ templ DocPage(c ssg.Ctx, sidebar []templates.NavGroup, description string, body 
 	}
 }
 
-// DocsIndex lists every documentation page with its summary.
+// DocsIndex lists every documentation page as a card, with its summary.
 templ DocsIndex(c ssg.Ctx, sidebar []templates.NavGroup, entries []DocSummary) {
 	@templates.Layout(c, "Documentation", sidebar) {
 		<article class="prose">
 			<h1>Documentation</h1>
 			<p class="lede">
-				Start with Getting started, then read The Node tree — between them they
-				cover everything needed to generate a site. The rest is optional.
+				New here? Start with <a href={ c.Link("docs/getting-started/") }>Getting
+				started</a>, then read <a href={ c.Link("docs/the-node-tree/") }>The Node
+				tree</a> and <a href={ c.Link("docs/ctx/") }>Ctx &amp; URLs</a> — between
+				them they cover everything needed to generate a site. The
+				<a href={ c.Link("docs/quick-reference/") }>Quick reference</a> at the
+				end of this list is the whole API on one page.
 			</p>
-			<dl class="doc-list">
+			<div class="cards">
 				for _, e := range entries {
-					<dt><a href={ c.Link(e.Path) }>{ e.Title }</a></dt>
-					<dd>{ e.Description }</dd>
+					@docCard(e.Title, e.Description, c.Link(e.Path))
 				}
-			</dl>
+			</div>
 		</article>
 	}
+}
+
+// docCard is one entry in the docs index.
+templ docCard(title string, body string, href string) {
+	<a class="card" href={ href }>
+		<h3>{ title }</h3>
+		<p>{ body }</p>
+	</a>
 }
 
 // DocSummary is one entry in the docs index.

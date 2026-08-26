@@ -1,14 +1,18 @@
 +++
 Title = "The Node tree"
-Description = "Node, Build, Ctx — the entire mechanism for generating a site."
+Description = "Node, Build, BuildOptions — the shape of the tree and how it's written."
 Order = 20
 Group = "Start here"
 +++
 
 A `Node` describes one directory in the output. `Build` walks the tree from the
-root and writes it. That is the whole mechanism — there is no second system.
+root and writes it. That is the whole mechanism — there is no config file, no
+convention scanner, no code generation, no second system. What each page
+receives when it renders is on [Ctx & URLs](../ctx/).
 
-## Node
+## Documentation
+
+### Node
 
 ```go
 type Node struct {
@@ -22,176 +26,104 @@ type Node struct {
 }
 ```
 
-Every field is optional. The zero value does nothing except recurse into
-`Children`, so a node can exist purely to group.
+Every field is optional; the zero value only recurses into `Children`, so a node
+can exist purely to group.
 
 | Field | Effect at this node's directory |
 | --- | --- |
 | `Title` | passed to pages as `Ctx.Title` |
 | `Page` | renders `index.html` |
-| `Files` | renders extra files by name — `404.html`, `rss.xml`, `feed/rss.xml` |
+| `Files` | renders extra files by name — `404.html`, `rss.xml`, `.nojekyll` |
 | `Generate` | children computed at build time, merged into `Children` |
 | `CopyFrom` | copies a directory's contents in as-is |
-| `CompileFrom` | compiles a scripts directory in |
+| `CompileFrom` | compiles a scripts directory in — see [Scripts & WebAssembly](../scripts-and-wasm/) |
 | `Children` | subdirectories, keyed by name |
 
-## What Build does
+### Children keys
 
-For each node, at its output path:
+Keys may contain slashes to nest (`"assets/style"`), but may not escape the
+output directory. Children are visited in sorted key order, so a build is
+reproducible. A node with nothing to do creates no directory.
 
-1. `Page` renders to `index.html`, then each entry in `Files` renders to its key.
-2. `CopyFrom` is copied in.
-3. `CompileFrom` is compiled in.
-4. `Generate` is called and merged into `Children` — **generated keys win** on
-   collision, which is how a content directory adds siblings without you writing
-   entries by hand.
-5. `Children` are walked, each key appended to the path.
+<details>
+<summary>Why keys are validated</summary>
 
-Children are visited in sorted key order, so a build is reproducible and a
-failure always reports the same node first.
+A key like `../secrets` or `/etc/passwd` would write outside the output
+directory if it were used as a path. `..` and absolute paths are rejected up
+front so a tree can't escape its `OutDir`.
 
-Keys may contain slashes to nest without an intermediate node
-(`"assets/style"`), but may not escape the output directory — `..` and absolute
-paths are rejected with an error rather than silently writing outside.
+</details>
 
-A node with nothing to do creates no directory. That matters: an empty
-`Children` entry doesn't litter the output with empty folders.
+<details>
+<summary>Why children are visited in sorted order</summary>
 
-## Ctx — the walker tells the page where it is
+Map iteration order in Go is random, and a build that shuffles its output
+layout is a build you can't trust. Sorted keys make two things deterministic:
+the output is byte-identical across builds, and when a build fails, the same
+node is reported every time instead of whichever the map handed over first.
 
-The walker already computed each page's path. Rather than making you retype it,
-it hands it over:
+</details>
+
+### Generate
+
+`Generate` runs at build time and returns children to merge into `Children` —
+generated keys win. This is how a directory of markdown becomes a set of pages:
 
 ```go
-type Ctx struct {
-	Title  string // the node's Title
-	Path   string // "", "about/", "de/projects/thing/"
-	Prefix string // "" or "/de" — the locale's URL prefix
-	Locale string // "" or "de"
-	Base   string // "" or "/astwerk" — the site's base path
-}
-
-func (c Ctx) URL() string              // this page's absolute URL
-func (c Ctx) Asset(path string) string // base-aware asset URL
-func (c Ctx) Link(path string) string  // base- and locale-aware link
+Generate: func() map[string]ssg.Node {
+	pages, _ := content.LoadDir("content/projects")
+	out := map[string]ssg.Node{}
+	for _, slug := range content.Slugs(pages) {
+		out[slug] = ssg.Node{Page: post(pages[slug])}
+	}
+	return out
+},
 ```
 
-`Page` and every entry in `Files` is a `PageFunc`:
+The full collection pattern — index page, tiles, pagination — is on
+[Content & collections](../content-and-collections/).
+
+### PageFunc, Templ, Static
+
+`Page` and every `Files` entry is a `PageFunc`:
 
 ```go
 type PageFunc func(Ctx) templ.Component
 ```
 
-This is the difference between astwerk and a hand-written build loop. Compare:
+Adapters cover the common shapes:
 
 ```go
-// Without Ctx — the path is typed twice and the prefix threaded by hand:
-"about": {Page: page(views.About, "About", "about/", prefix)},
-
-// With Ctx — the walker supplies both:
-"about": {Title: "About", Page: ssg.Templ(views.About)},
-```
-
-### Adapting your components
-
-If your components take the common `(title, path, prefix)` triple, `ssg.Templ`
-adapts them:
-
-```go
-"about": {Title: "About", Page: ssg.Templ(views.About)},
-```
-
-For a component that needs nothing, `ssg.Static`. For anything else — extra
-arguments, computed values — write the closure and take what you need from `Ctx`:
-
-```go
-Page: func(c ssg.Ctx) templ.Component {
+"about": {Title: "About", Page: ssg.Templ(views.About)}, // (title, path, prefix)
+Page: ssg.Static(views.Home),                            // needs nothing
+Page: func(c ssg.Ctx) templ.Component {                  // anything else
 	return views.Projects(c.Title, c.Path, c.Prefix, tiles)
 },
 ```
 
-That escape hatch is the design law in action: the helpers cover the common
-shape, and when they don't fit you drop to a plain function with no ceremony.
+`ssg.Templ` adapts the common `(title, path, prefix)` signature — the walker
+fills in path and prefix, so only the title is yours to give. `ssg.Static` is
+for components that need nothing. Anything else — extra arguments, computed
+values — is a closure.
 
-## Always build URLs through Ctx
+### Files
 
-Write `/style/style.css` as a literal and it breaks the moment the site is served
-from a subdirectory — which is exactly what GitHub project Pages do. A project
-site lives at `user.github.io/repo/`, and Pages does **no** URL rewriting: an
-absolute `/style/style.css` resolves against the domain root, which is a
-different site. If you also have a user Pages site at `user.github.io`, you get
-its files instead of a 404 — wrong, and silently so.
-
-Use `Ctx.Asset` and `Ctx.Link`:
-
-```templ
-templ Layout(c ssg.Ctx) {
-	<link rel="stylesheet" href={ c.Asset("style/style.css") }/>
-	<a href={ c.Link("docs/") }>Docs</a>
-}
-```
-
-Note the parameter is named `c`, not `ctx`. templ's generated code declares its
-own `ctx context.Context`, so a parameter called `ctx` collides with it and the
-generated file won't compile. It's an easy half hour to lose.
-
-`Asset` resolves a path from the site root. `Link` does the same but also applies
-the current locale prefix, so the same nav markup stays inside whatever language
-it's rendered in.
-
-### Relative URLs make the output portable
-
-There are two ways to resolve those. The better default is relative:
+`Page` always writes `index.html`, because pretty URLs want a directory per
+page. Some files can't work that way — hosts look for `404.html` at the root,
+feed readers want `rss.xml`, and GitHub Pages needs `.nojekyll` or it runs the
+output through Jekyll:
 
 ```go
-ssg.Build(root, ssg.BuildOptions{
-	RelativeURLs: true,
-	BaseURL:      "/astwerk", // only used by Ctx.URL, for canonical tags
-})
-```
-
-`Asset` and `Link` then emit URLs relative to each page's own depth —
-`style/style.css` from the root, `../../style/style.css` from two levels down.
-One build works everywhere: opened straight off disk with `file://`, served at a
-localhost root, and deployed under `/astwerk/`, with no rebuild and no flag to
-remember. Previewing is just:
-
-```
-cd build && python3 -m http.server 8000
-```
-
-The alternative is absolute URLs with a base path — leave `RelativeURLs` off and
-set `BaseURL`. Everything then starts with `/astwerk/`, which is correct in
-production and awkward everywhere else, because a local preview has to be served
-from a matching subdirectory.
-
-`Ctx.URL` is always absolute regardless, because canonical links, Open Graph tags
-and feed entries have to be. That is what `BaseURL` is still for.
-
-This site uses relative URLs, and a test walks every generated page resolving
-each link against the directory it was emitted from.
-
-## Files, for outputs that aren't directory indexes
-
-`Page` always writes `index.html`, because pretty URLs want a directory per page.
-Some files can't work that way: hosts look for `404.html` at the root, feed
-readers want `rss.xml`, and GitHub Pages needs `.nojekyll` or it runs the output
-through Jekyll and eats anything starting with an underscore.
-
-```go
-root := ssg.Node{
-	Page: ssg.Templ(views.Home),
-	Files: map[string]ssg.PageFunc{
-		"404.html":  ssg.Templ(views.NotFound),
-		"rss.xml":   feed,
-		".nojekyll": empty,
-	},
-}
+Files: map[string]ssg.PageFunc{
+	"404.html":  ssg.Templ(views.NotFound),
+	"rss.xml":   feed,
+	".nojekyll": empty,
+},
 ```
 
 `Files` entries render after `Page`, so a key of `"index.html"` overwrites it.
 
-## BuildOptions
+### BuildOptions
 
 ```go
 type BuildOptions struct {
@@ -203,21 +135,23 @@ type BuildOptions struct {
 }
 ```
 
-`Dev` exists so a running dev server doesn't have the ground pulled out from
-under it. Without it, `Build` removes `OutDir` first, so a renamed page can't
-leave a stale file behind.
+`OutDir` defaults to `"build"`. `BaseURL` and `RelativeURLs` control the URLs
+pages generate — see [Ctx & URLs](../ctx/). `Dev` exists so a running dev server
+doesn't have the ground pulled out from under it: without it, `Build` removes
+`OutDir` first, so a renamed page can't leave a stale file behind.
+
+<details>
+<summary>Parallel, and the escape hatch</summary>
 
 `Parallel` renders siblings across goroutines, bounded by `GOMAXPROCS`. The
-output and the error reporting are identical either way — the only thing that
-changes is wall time, and only on a site with enough pages to notice. It's
-opt-in because it runs *your* `Page`, `Files` and `Generate` functions
-concurrently: rendering templ components is safe, a `Generate` closure appending
-to a captured slice is not.
+output and error reporting are identical either way; only wall time changes.
+It's opt-in because it runs *your* `Page`, `Files` and `Generate` functions
+concurrently — rendering templ components is safe, a `Generate` closure
+appending to a captured slice is not. `CompileScripts` is always parallel; each
+`.wasm` is built by its own `go build` process, so there's nothing of yours to
+race.
 
-## When the tree isn't enough
-
-It won't always be. `Build` returns an error and nothing stops you doing more
-work afterwards:
+The tree won't always be enough, and that's fine:
 
 ```go
 if err := ssg.Build(root, opts); err != nil {
@@ -228,5 +162,27 @@ if err := writeSitemap("build/sitemap.xml", pages); err != nil {
 }
 ```
 
-That's the intended escape hatch, not a workaround. The tree covers the
-repeating shape; anything genuinely one-off stays plain Go.
+That's the intended escape hatch, not a workaround: the tree covers the
+repeating shape, anything genuinely one-off stays plain Go.
+
+</details>
+
+## Example
+
+```go
+root := ssg.Node{
+	Title: "Site",
+	Page:  ssg.Templ(views.Home),
+	Children: map[string]ssg.Node{
+		"about": {Title: "About", Page: ssg.Templ(views.About)},
+		"style": {CopyFrom: "style"},
+	},
+}
+if err := ssg.Build(root, ssg.BuildOptions{}); err != nil {
+	log.Fatal(err)
+}
+```
+
+That writes `build/index.html`, `build/about/index.html`, and copies `style/`
+in. `Page` renders the index; each `Children` key becomes a directory; `CopyFrom`
+is copied verbatim.

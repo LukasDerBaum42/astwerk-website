@@ -1,28 +1,41 @@
 package templates
 
-// CodeBlock renders a Go snippet with syntax highlighting.
+// CodeBlock renders a Go snippet with syntax highlighting and a header bar
+// carrying a language label and a copy button.
 //
 // Highlighting happens at build time — chroma emits styled markup, so no
 // JavaScript highlighter ships to the browser. The docs pages get the same
-// treatment through goldmark's highlighting extension.
+// treatment through goldmark's highlighting extension; the copy button is wired
+// by a single listener in layout.templ.
 templ CodeBlock(src string) {
-	<div class="code">
-		@templ.Raw(HighlightGo(src))
-	</div>
+	@codeBlock("go", HighlightGo(src))
 }
 
 // CodeBlockJS renders a JavaScript snippet with syntax highlighting, for
 // showing the output the markers generate.
 templ CodeBlockJS(src string) {
-	<div class="code">
-		@templ.Raw(HighlightJS(src))
-	</div>
+	@codeBlock("js", HighlightJS(src))
 }
 
 // CodeBlockTempl renders a templ snippet with syntax highlighting: markup as
 // HTML, Go inside { expressions } and @component calls as Go.
 templ CodeBlockTempl(src string) {
+	@codeBlock("templ", HighlightTempl(src))
+}
+
+// CodeBlockHTML renders an HTML snippet with syntax highlighting, for showing
+// the markup the build generated.
+templ CodeBlockHTML(src string) {
+	@codeBlock("html", HighlightHTML(src))
+}
+
+// codeBlock is the shared shell: header bar plus pre-highlighted markup.
+templ codeBlock(lang string, html string) {
 	<div class="code">
-		@templ.Raw(HighlightTempl(src))
+		<div class="code-header">
+			<span class="code-lang">{ lang }</span>
+			<button type="button" class="code-copy" data-copy>Copy</button>
+		</div>
+		@templ.Raw(html)
 	</div>
 }

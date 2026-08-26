@@ -10,8 +10,8 @@ import (
 // and every page's own Document names its signals independently, so these
 // package-level values are shared safely: the build only ever reads them.
 var (
-	XCount = x.Named("count", 0)
-	XOpen  = x.NewSignal(false)
+	XCount  = x.Named("count", 0)
+	XDouble = x.Computed(XCount.Mul(2))
 
 	XPrice = x.NewSignal(10.0)
 	XQty   = x.NewSignal(2.0)
@@ -29,6 +29,15 @@ var (
 	BBusy   = x.NewSignal(false)
 	BColour = x.NewSignal("#4f7cff")
 
+	XPosts   = x.Named("posts", []XPost{{ID: "0", Title: "Rendered at build time"}})
+	XLoading = x.Named("loading", false)
+
+	XPointerX = x.Named("pointerX", 0)
+
+	XFaq1 = x.Named("faq1", true)
+	XFaq2 = x.Named("faq2", false)
+	XFaq3 = x.Named("faq3", false)
+
 	HoodCount = x.Named("hood", 0)
 )
 
@@ -39,39 +48,60 @@ type XTodo struct {
 	Text string `json:"text"`
 }
 
+// XPost is one async-demo row, with the same contract as XTodo.
+type XPost struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
 templ ExampleXCounter(c ssg.Ctx, prev, next *templates.NavItem) {
 	@examplePage(c, prev, next) {
-		<h1>A counter, without WASM</h1>
+		<h1>A counter</h1>
 		<p class="lede">
-			The same counter as the WASM demo, but the JavaScript was generated at
-			build time by the markers themselves. No <code>.wasm</code>, no runtime
-			to download — view source: the bindings are right there in this page's
-			HTML.
+			The same counter as the WASM demo — a signal, a computed double, and
+			+/−/reset handlers — but the JavaScript was generated at build time by
+			the markers themselves. No <code>.wasm</code>, no runtime to download;
+			view source, and the bindings are right there in this page's HTML.
 		</p>
 		@x.Document(xCounterDemo())
-		@templates.CodeBlockTempl(xCounterSrc)
+
 		<h2>How it works</h2>
-		<ul>
-			<li><code>x.Named("count", 0)</code> creates the state. The name is
-				what lets the effect script below read it as <code>count.get()</code>.</li>
-			<li><code>{ "@" }x.Text(XCount)</code> renders the current value into a
-				<span> and emits the JavaScript that keeps it in sync — in the same
-				call. The marker owns its element, so there is no selector to keep in
-				sync by hand.</span></li>
-			<li><code>x.On("click", …)</code> is a binding on the button; the action
-				is built from combinators — <code>count.Set(count.Add(1))</code>
-				increments, <code>count.Set(x.Lit(0))</code> resets.</li>
-			<li><code>x.Not</code> negates, so the toggle button flips
-				<code>XOpen</code>; <code>x.When</code> mounts and unmounts the secret
-				paragraph as it changes.</li>
-			<li><code>x.Effect</code> runs the script on load and again whenever
-				<code>count</code> changes. The script is written in templ, so its
-				content is raw — no escaping, no quoting.</li>
-			<li><code>x.Document</code> is what emits the runtime and state
-				declarations before this markup and the bindings after it. Outside a
-				Document the markers render plain static HTML, which is why the page
-				still reads fine with JavaScript disabled.</li>
-		</ul>
+		@pieceTempl("State", xCounterStateSrc) {
+			<p>
+				<code>x.Named</code> creates the state under a fixed name, so
+				scripts can read it as <code>count.get()</code>.
+				<code>x.Computed</code> derives the double from it — the expression
+				is evaluated at build time for the static value and compiled to
+				JavaScript that recomputes it when count changes.
+			</p>
+		}
+		@pieceTempl("The buttons", xCounterButtonsSrc) {
+			<p>
+				<code>x.El</code> renders a button with its bindings attached.
+				<code>x.On</code> binds a click handler whose action is built from
+				combinators: <code>Add</code> and <code>Sub</code> change the signal
+				by one, <code>x.Lit(0)</code> resets it. The body is the button's
+				content — <code>{ "@" }x.Text(XCount)</code> renders the value and
+				the binding that keeps it in sync, so the button shows the count as
+				it changes.
+			</p>
+		}
+		@pieceTempl("The derived value", xCounterDerivedSrc) {
+			<p>
+				For the memo, <code>{ "@" }x.Text(XDouble)</code> does the same: renders
+				the current value and keeps it in sync as count changes.
+			</p>
+		}
+		@fullSourceTempl(xCounterSrc)
+		<details>
+			<summary>What Document emits</summary>
+			<p>
+				<code>x.Document</code> renders its body and emits the runtime and
+				state declarations before the markup, the bindings after it. Outside
+				a Document the markers render plain static HTML — a page with no
+				markers ships no script at all.
+			</p>
+		</details>
 		<p>
 			The full marker set is documented in
 			<a href={ c.Link("docs/x/") }>x — compiled reactive markup</a>.
@@ -88,19 +118,37 @@ templ ExampleXForms(c ssg.Ctx, prev, next *templates.NavItem) {
 			recomputed in the browser whenever either input changes.
 		</p>
 		@x.Document(xFormsDemo())
-		@templates.CodeBlockTempl(xFormsSrc)
+
 		<h2>How it works</h2>
-		<ul>
-			<li><code>x.Number</code> is two-way: typing writes the signal, and the
-				signal being set writes back into the field. Input that isn't a
-				number is ignored rather than clobbering the signal.</li>
-			<li><code>x.Computed(XPrice.Mul(XQty))</code> derives the total. The
-				expression is evaluated at build time to render the static
-				<code>20</code>, and compiled to JavaScript that recomputes it when
-				either dependency changes.</li>
-			<li><code>x.Checkbox</code> two-way binds a bool; <code>x.Show</code>
-				lets that same bool drive an element's visibility.</li>
-		</ul>
+		@pieceTempl("State", xFormsStateSrc) {
+			<p>
+				Two signals for the inputs; the total is derived from them with
+				<code>x.Computed</code> — <code>Mul</code> is a combinator compiled to
+				JavaScript, so the total recomputes in the browser.
+			</p>
+		}
+		@pieceTempl("The inputs", xFormsInputsSrc) {
+			<p>
+				<code>x.Number</code> is two-way — typing writes the signal, setting
+				the signal updates the field — and input that isn't a number is
+				ignored. <code>x.Text</code> renders the computed total.
+			</p>
+		}
+		@pieceTempl("The checkbox", xFormsCheckboxSrc) {
+			<p>
+				<code>x.Checkbox</code> two-way binds a bool, and <code>x.Show</code>
+				lets that same signal drive an element's visibility.
+			</p>
+		}
+		@fullSourceTempl(xFormsSrc)
+		<details>
+			<summary>Why two-way doesn't feed back</summary>
+			<p>
+				Typing fires an input event that writes the signal; the reverse
+				direction is a plain value assignment, which doesn't fire an input
+				event. The two directions never chase each other.
+			</p>
+		</details>
 	}
 }
 
@@ -114,53 +162,203 @@ templ ExampleXTodo(c ssg.Ctx, prev, next *templates.NavItem) {
 			combinator can't say is plain JavaScript reading the named signals.
 		</p>
 		@x.Document(xTodoDemo())
-		@templates.CodeBlock(xTodoSrc)
+
 		<h2>How it works</h2>
-		<ul>
-			<li><code>x.Input</code> two-way binds the new-item field to
-				<code>draft</code>; the handler script reads it as
-				<code>draft.get()</code> and clears it with <code>draft.set("")</code>,
-				which the binding echoes back into the field.</li>
-			<li><code>x.List</code> takes the signal, the JSON field that keys each
+		@pieceTempl("State", xTodoStateSrc) {
+			<p>
+				The JSON tags are the field names the browser half of the list reads,
+				so they are part of the contract with <code>todoRow</code>. The two
+				initial rows were rendered at build time; everything after that
+				happens in the browser.
+			</p>
+		}
+		@pieceTempl("The list", xTodoListSrc) {
+			<p>
+				<code>x.List</code> takes the signal, the JSON field that keys each
 				item, a Go renderer for rows present at build time, and the name of a
-				JavaScript function that renders rows added in the browser —
-				<code>todoRow</code>, defined in the same page's script.</li>
-			<li>Rows are keyed by <code>id</code>: adding or removing an item moves
-				or detaches one node; every other row's element is untouched.</li>
-			<li>Remove uses event delegation on the list wrapper, so one listener
-				covers rows rendered by the Go side and rows rendered by
-				<code>todoRow</code> alike.</li>
-		</ul>
+				JavaScript function that renders rows added in the browser. Rows are
+				keyed by <code>id</code>: adding or removing an item moves or detaches
+				one node, and every other row is untouched.
+			</p>
+		}
+		@pieceTempl("The script", xTodoScriptSrc) {
+			<p>
+				Appending to the array is one of the few things combinators can't say,
+				so it's a script: <code>draft.get()</code> reads the input signal,
+				<code>todos.set(...)</code> replaces the list, and
+				<code>draft.set("")</code> clears the field — which the two-way
+				binding echoes back.
+			</p>
+		}
+		@pieceTempl("The count", xTodoCountSrc) {
+			<p>
+				The remaining count is an effect: it reads
+				<code>todos.get()</code>, so it re-runs whenever the list changes
+				and rewrites the line.
+			</p>
+		}
+		@fullSourceTempl(xTodoSrc)
+		<details>
+			<summary>Why rows are keyed by id</summary>
+			<p>
+				The key is what makes the list patch instead of re-render: the
+				browser can tell "this row moved" from "this is a new row". An item
+				whose key changes is treated as a new item.
+			</p>
+		</details>
+	}
+}
+
+templ ExampleXAsync(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>Async data</h1>
+		<p class="lede">
+			The WASM async demo through the script escape hatch: a fake fetch that
+			takes half a second, a loading signal, and a keyed list — with no WASM
+			and no framework. The WASM version is
+			<a href={ c.Link("examples/async/") }>Async data</a>.
+		</p>
+		@x.Document(xAsyncDemo())
+
+		<h2>How it works</h2>
+		@pieceTempl("State", xAsyncStateSrc) {
+			<p>
+				Two named signals: the posts, and a loading flag the script toggles.
+				Named, because the script below reads and writes them directly.
+			</p>
+		}
+		@pieceTempl("The list", xAsyncListSrc) {
+			<p>
+				<code>x.List</code> renders the posts statically at build time — the
+				one row that exists before any script runs — and keeps the list in
+				sync as the script replaces the signal.
+			</p>
+		}
+		@pieceTempl("The script", xAsyncScriptSrc) {
+			<p>
+				Combinators stop where a real program begins: timing, fetching, side
+				effects. That is the escape hatch — a plain script reading the named
+				signals. It flips <code>loading</code>, waits, replaces
+				<code>posts</code>, and updates the status line directly.
+			</p>
+		}
+		@fullSourceTempl(xAsyncSrc)
+		<details>
+			<summary>Why this is a script, not a marker</summary>
+			<p>
+				The marker set covers state, bindings and structure. Async work has
+				no combinator — it is a program, so it is a script. That boundary is
+				deliberate: the script escape hatch is what keeps the markers from
+				having to grow into a language.
+			</p>
+		</details>
+	}
+}
+
+templ ExampleXCanvas(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>Canvas</h1>
+		<p class="lede">
+			The WASM canvas demo, written where it actually lives: a script. The
+			<code>x</code> markers cover state, bindings and structure; a canvas
+			animation loop is a program, so it is the escape hatch. The WASM
+			version is <a href={ c.Link("examples/canvas/") }>Canvas</a> — the
+			same scene, in Go.
+		</p>
+		@x.Document(xCanvasDemo())
+
+		<h2>How it works</h2>
+		@pieceTempl("The canvas", xCanvasMarkupSrc) {
+			<p>
+				The canvas is plain markup. The one reactive bit is the pointer
+				readout: an <code>{ "@" }x.Text</code> marker over a named signal
+				the script feeds.
+			</p>
+		}
+		@pieceTempl("The loop", xCanvasScriptSrc) {
+			<p>
+				The whole animation is a script: the same wave the WASM demo draws,
+				with the pointer lifting the line. The script escape hatch is the
+				boundary of the marker set — and for canvas, it is the whole answer.
+			</p>
+		}
+		@fullSourceTempl(xCanvasSrc)
+		<details>
+			<summary>When to reach for the escape hatch</summary>
+			<p>
+				Markers pay off when state drives markup. A canvas redraws every
+				frame by nature — there is no declarative core to bind to — so the
+				script isn't a workaround here, it is the answer. The WASM version
+				exists for when you want that logic in Go instead.
+			</p>
+		</details>
+	}
+}
+
+templ ExampleXFaq(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>Conditional content</h1>
+		<p class="lede">
+			A FAQ is a handful of <code>x.When</code> subtrees: a button toggles a
+			bool with <code>x.Not</code>, and the answer mounts and unmounts as it
+			changes. The first answer is open at build time, so the page reads
+			correctly with JavaScript disabled — and with it on, the answers
+			appear and disappear in place.
+		</p>
+		@x.Document(xFaqDemo())
+
+		<h2>How it works</h2>
+		@pieceTempl("State", xFaqStateSrc) {
+			<p>
+				One bool per question. The first starts open, so the page has
+				static content; the rest start closed.
+			</p>
+		}
+		@pieceTempl("The toggle", xFaqToggleSrc) {
+			<p>
+				<code>x.Not</code> negates the signal, so clicking always flips it —
+				no if/else. <code>x.Class("on", …)</code> highlights the open
+				questions, so the state is visible before you read any answers.
+			</p>
+		}
+		@pieceTempl("The answer", xFaqWhenSrc) {
+			<p>
+				<code>x.When</code> takes the condition and the subtree to mount —
+				a plain templ component. It mounts while the condition is true and
+				unmounts when it turns false, and the HTML is captured at build
+				time, so the answer is in the page source before any script runs.
+			</p>
+		}
+		@fullSourceTempl(xFaqSrc)
+		<details>
+			<summary>When vs Show</summary>
+			<p>
+				<code>x.Show</code> keeps the same nodes and toggles visibility, so
+				input focus and scroll position inside them survive.
+				<code>x.When</code> removes the subtree entirely and rebuilds it
+				from the captured HTML on remount — right for content rebuilt from
+				state, wrong for a form you'd like to keep typing in.
+			</p>
+		</details>
 	}
 }
 
 templ xCounterDemo() {
 	<div class="demo">
 		<div class="counter-row">
+			@x.El("button", x.On("click", XCount.Set(XCount.Sub(1)))) {
+				&minus;
+			}
+			@x.Text(XCount)
 			@x.El("button", x.On("click", XCount.Set(XCount.Add(1)))) {
-				@x.Text(XCount) +
+				+
 			}
 			@x.El("button", x.On("click", XCount.Set(x.Lit(0)))) {
 				reset
 			}
 		</div>
-		<p>
-			@x.El("button", x.On("click", XOpen.Set(x.Not(XOpen)))) {
-				toggle secret
-			}
-			@x.When(XOpen, xSecret())
-		</p>
-		<p class="demo-note" data-x-note></p>
-		@x.Effect() {
-			<script>
-				document.querySelector("[data-x-note]").textContent = "Count: " + count.get();
-			</script>
-		}
+		<p class="demo-note">Double: <span>@x.Text(XDouble)</span></p>
 	</div>
-}
-
-templ xSecret() {
-	<span>the conditional subtree</span>
 }
 
 templ xFormsDemo() {
@@ -184,8 +382,129 @@ templ xTodoDemo() {
 		<div data-x-list>
 			@x.List(XTodos, "id", xTodoRow, "todoRow")
 		</div>
+		<p class="demo-note"><span data-x-remaining>2 remaining</span></p>
 		@xTodoScript()
+		@x.Effect() {
+			<script>
+				document.querySelector("[data-x-remaining]").textContent = todos.get().length + " remaining";
+			</script>
+		}
 	</div>
+}
+
+templ xAsyncDemo() {
+	<div class="demo">
+		<div class="counter-row">
+			<button type="button" data-x-reload>Reload</button>
+			@x.El("span", x.Show(XLoading)) {
+				Loading…
+			}
+		</div>
+		<p class="demo-note" data-x-status>1 post rendered at build time</p>
+		<div data-x-list>
+			@x.List(XPosts, "id", xPostRow, "postRow")
+		</div>
+		@xAsyncScript()
+	</div>
+}
+
+// xAsyncScript is the escape hatch carrying the fake fetch: it reads and
+// writes the named signals, and defines the row template the list uses for
+// items that appear at runtime.
+templ xAsyncScript() {
+	<script>
+		function postRow(p) {
+			return "<li>" + p.title + "</li>";
+		}
+		const status = document.querySelector("[data-x-status]");
+		function load() {
+			loading.set(true);
+			status.textContent = "Loading…";
+			setTimeout(() => {
+				posts.set([
+					{ id: "1", title: "Signals track their own dependencies" },
+					{ id: "2", title: "Keyed lists move nodes instead of rebuilding them" },
+					{ id: "3", title: "Scripts are the escape hatch — this is one" },
+				]);
+				loading.set(false);
+				status.textContent = posts.get().length + " posts loaded";
+			}, 500);
+		}
+		document.querySelector("[data-x-reload]").addEventListener("click", load);
+		load();
+	</script>
+}
+
+templ xCanvasDemo() {
+	<div class="demo">
+		<p class="demo-note">Pointer x: <span>@x.Text(XPointerX)</span> — move the pointer over the canvas.</p>
+		<canvas data-x-canvas width="600" height="200"></canvas>
+		<p class="demo-note">Move the pointer over the canvas.</p>
+		@xCanvasScript()
+	</div>
+}
+
+// xCanvasScript is the whole animation: the same wave the WASM demo draws,
+// with the pointer lifting the line. The one reactive bit is the pointer
+// readout — the script feeds the signal, the marker keeps it in sync.
+templ xCanvasScript() {
+	<script>
+		const canvas = document.querySelector("[data-x-canvas]");
+		const ctx = canvas.getContext("2d");
+		// Match the drawing buffer to the displayed size, so buffer and pointer
+		// coordinates agree and the drawing isn't stretched.
+		const r = canvas.getBoundingClientRect();
+		canvas.width = Math.round(r.width);
+		canvas.height = Math.round(r.height);
+		const w = canvas.width;
+		const h = canvas.height;
+		let elapsed = 0;
+		let last = null;
+		let px = -9999;
+		canvas.addEventListener("pointermove", (e) => {
+			const rect = canvas.getBoundingClientRect();
+			px = e.clientX - rect.left;
+			pointerX.set(Math.round(px));
+		});
+		function frame(now) {
+			// requestAnimationFrame passes the absolute frame time, not a delta.
+			if (last !== null) elapsed += (now - last) / 1000;
+			last = now;
+			ctx.clearRect(0, 0, w, h);
+			for (let i = 0; i < w; i += 6) {
+				const wave = Math.sin(i / 40 + elapsed * 2) * 40;
+				const lift = Math.exp(-Math.pow(i - px, 2) / 4000) * 30;
+				ctx.fillStyle = "#4f7cff";
+				ctx.fillRect(i, h / 2 + wave - lift, 3, 3);
+			}
+			requestAnimationFrame(frame);
+		}
+		requestAnimationFrame(frame);
+	</script>
+}
+
+// xFaqDemo is three toggling answers. Each button flips its own bool with
+// x.Not, and the answer beneath it mounts and unmounts with x.When.
+templ xFaqDemo() {
+	<div class="demo">
+		@x.El("button", x.On("click", XFaq1.Set(x.Not(XFaq1))), x.Class("on", XFaq1)) {
+			What is compiled markup?
+		}
+		@x.When(XFaq1, xFaqAnswer("The markers render at build time and subscribe in the browser — the page reads correctly with JavaScript disabled."))
+		@x.El("button", x.On("click", XFaq2.Set(x.Not(XFaq2))), x.Class("on", XFaq2)) {
+			When should I reach for WebAssembly instead?
+		}
+		@x.When(XFaq2, xFaqAnswer("When the behaviour is a program — canvas, fetching, timers. Markers cover state, bindings and structure; everything else is Go in the browser."))
+		@x.El("button", x.On("click", XFaq3.Set(x.Not(XFaq3))), x.Class("on", XFaq3)) {
+			What happens without JavaScript?
+		}
+		@x.When(XFaq3, xFaqAnswer("The page keeps its static form — the first answer is already open. Nothing needs a script to be readable."))
+	</div>
+}
+
+// xFaqAnswer is one answer body — the subtree x.When mounts and unmounts.
+templ xFaqAnswer(text string) {
+	<p class="demo-note">{ text }</p>
 }
 
 templ ExampleXBindings(c ssg.Ctx, prev, next *templates.NavItem) {
@@ -198,21 +517,40 @@ templ ExampleXBindings(c ssg.Ctx, prev, next *templates.NavItem) {
 			watch each element update on its own, nothing else re-renders.
 		</p>
 		@x.Document(xBindingsDemo())
-		@templates.CodeBlockTempl(xBindingsSrc)
+
 		<h2>How it works</h2>
-		<ul>
-			<li><code>x.Attr</code> sets a string attribute; an empty value
-				removes it, which is what string-driven boolean attributes need.</li>
-			<li><code>x.Class</code> toggles one class; <code>x.Disabled</code>
-				toggles the boolean attribute through <code>toggleAttribute</code>,
-				so "disabled" is present or absent rather than true or false.</li>
-			<li><code>x.Style</code> sets one CSS property through
-				<code>style.setProperty</code>, so a value cannot break out of its
-				property into the rest of the stylesheet.</li>
-			<li>All of them render their current value into the static HTML and
-				subscribe to the signal — the subscriber is resolved at build time,
-				along with everything else on this page.</li>
-		</ul>
+		@pieceTempl("State", xBindingsStateSrc) {
+			<p>
+				One signal per property the demo touches: the link target, the class,
+				the disabled flag and the colour.
+			</p>
+		}
+		@pieceTempl("The elements", xBindingsElementsSrc) {
+			<p>
+				Each binding owns one property of one element. <code>x.Attr</code>
+				sets a string attribute and removes it when empty; <code>x.Class</code>
+				toggles one class; <code>x.Disabled</code> toggles the boolean
+				attribute — present or absent, not true or false; <code>x.Style</code>
+				sets one CSS property through <code>style.setProperty</code>.
+			</p>
+		}
+		@pieceTempl("The buttons", xBindingsButtonsSrc) {
+			<p>
+				Each button writes its signal with an action built from combinators:
+				<code>x.Not</code> toggles, <code>x.Lit</code> stores a constant.
+				Because each binding owns its property, changing one signal updates
+				exactly that element's property — nothing else re-renders.
+			</p>
+		}
+		@fullSourceTempl(xBindingsSrc)
+		<details>
+			<summary>How the static value renders</summary>
+			<p>
+				Every binding renders its current value into the HTML at build time —
+				the page reads correctly with JavaScript disabled — and subscribes to
+				the signal for updates.
+			</p>
+		</details>
 	}
 }
 
@@ -226,14 +564,28 @@ templ ExampleXUnderTheHood(c ssg.Ctx, prev, next *templates.NavItem) {
 			the whole page, runtime included.
 		</p>
 		@x.Document(hoodDemo())
-		@templates.CodeBlockTempl(hoodSrc)
+
+		<h2>The source</h2>
+		@pieceTempl("State", hoodStateSrc) {
+			<p>
+				One named signal. Named, so the script the build emits can declare it
+				as a real variable.
+			</p>
+		}
+		@pieceTempl("The widget", hoodWidgetSrc) {
+			<p>
+				A button whose click handler increments the signal, with the value
+				rendered inside it via <code>x.Text</code>.
+			</p>
+		}
+
 		<h2>The generated HTML</h2>
 		<p>
 			Each marker stamps its own element with <code>data-x</code> and
 			renders the current value — this is the page's markup, static before
 			any script runs.
 		</p>
-		@templates.CodeBlock(hoodHTML())
+		@templates.CodeBlockHTML(hoodHTML())
 		<h2>The generated script</h2>
 		<p>
 			The runtime (omitted here) declares the signal, and the footer binds
@@ -242,6 +594,14 @@ templ ExampleXUnderTheHood(c ssg.Ctx, prev, next *templates.NavItem) {
 			text binding writes the new value.
 		</p>
 		@templates.CodeBlockJS(hoodJS())
+		<details>
+			<summary>The runtime, elided here</summary>
+			<p>
+				The runtime is assembled per page from fragments — a counter page
+				ships roughly the runtime for a counter, not a framework. The full
+				output, runtime included, is in this page's source.
+			</p>
+		</details>
 	}
 }
 
@@ -279,6 +639,11 @@ templ hoodDemo() {
 // xTodoRow renders a row present at build time — the static half of the list.
 templ xTodoRow(item XTodo) {
 	<li>{ item.Text } <button data-remove={ item.ID }>remove</button></li>
+}
+
+// xPostRow renders a post present at build time — the async demo's static half.
+templ xPostRow(p XPost) {
+	<li>{ p.Title }</li>
 }
 
 // xTodoScript is the client-side half: the row template for items added in the

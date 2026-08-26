@@ -5,129 +5,112 @@ Order = 10
 Group = "Start here"
 +++
 
-astwerk generates a static site from a Go program. You write a tree describing
-the output directory; it walks the tree and writes files. Templates are
-[templ](https://templ.guide) components — real Go, type-checked at compile time.
+astwerk generates a static site from a Go program. You describe the output
+directory as a tree of `Node`s; `Build` walks the tree and writes files.
+Templates are [templ](https://templ.guide) components — real Go, type-checked
+at compile time.
 
-Prefer to build something? The [Build a site](../../tutorial/) tutorial walks through
-a complete site — collection, locale, interactivity and all — step by step.
+For a step-by-step walkthrough, see the [Build a site](../../tutorial/)
+tutorial.
 
 ## Install
 
-```
+Requires Go 1.25 or newer.
+
+```sh
 go get github.com/LukasDerBaum42/astwerk
-```
-
-You also need the templ CLI to compile `.templ` files into Go:
-
-```
 go install github.com/a-h/templ/cmd/templ@latest
 ```
 
-That's the whole toolchain. No Node.js, no bundler, no plugin system.
+`go get` adds astwerk to your module's `go.mod`. The templ CLI compiles
+`.templ` files to Go — that's the whole toolchain, no Node.js, no bundler, no
+plugin system. If `templ` isn't on your `PATH`, the `go run` form works without
+installing anything:
 
-## A minimal site
+```sh
+go run github.com/a-h/templ/cmd/templ@latest generate
+```
 
-Three files. First a template, `views/page.templ`:
+## Example
+
+A template, `views/page.templ`:
 
 ```templ
 package views
 
 templ Page(title string, path string, prefix string) {
-	<!DOCTYPE html>
-	<html lang="en">
-		<head>
-			<meta charset="utf-8"/>
-			<title>{ title }</title>
-		</head>
-		<body>
-			<h1>{ title }</h1>
-			{ children... }
-		</body>
+	<html>
+		<head><title>{ title }</title></head>
+		<body><h1>{ title }</h1></body>
 	</html>
 }
 ```
 
-Then `main.go`:
+`main.go` — the tree:
 
 ```go
 package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/LukasDerBaum42/astwerk/ssg"
-	"myproject/views"
+	"example.com/site/views"
 )
 
 func main() {
-	dev := len(os.Args) > 1 && os.Args[1] == "--dev"
-
 	root := ssg.Node{
 		Title: "Home",
 		Page:  ssg.Templ(views.Page),
 		Children: map[string]ssg.Node{
 			"about": {Title: "About", Page: ssg.Templ(views.Page)},
-			"style": {CopyFrom: "style"},
 		},
 	}
 
-	if err := ssg.Build(root, ssg.BuildOptions{Dev: dev}); err != nil {
+	if err := ssg.Build(root, ssg.BuildOptions{}); err != nil {
 		log.Fatal(err)
 	}
 }
 ```
 
-Then build:
+Build:
 
-```
+```sh
 templ generate
 go run .
 ```
 
-You get:
+That writes:
 
-```
+```text
 build/
-  index.html
-  about/index.html
-  style/…
+├── index.html
+└── about/
+    └── index.html
 ```
 
-## What just happened
+`ssg.Build` walks the tree and generates the corresponding files — each
+`Children` key becomes a directory, each `Page` its `index.html`. How nodes,
+children and copying work is on [The Node tree](../the-node-tree/).
 
-`Build` walked the tree. For each node it made the directory, rendered `Page`
-into `index.html`, and recursed into `Children` using the map keys as directory
-names. `CopyFrom` copied a directory in as-is.
+<details>
+<summary>What exactly does Build do?</summary>
 
-`ssg.Templ` is the adapter that makes `views.Page` usable as a page. The walker
-knows each page's path and locale, so it fills those arguments in — you supply
-only the title. That's covered in [The Node tree](../the-node-tree/).
+`Build` walks the tree depth-first: for each node it makes the directory,
+renders `Page` into `index.html`, renders each `Files` entry, copies
+`CopyFrom`, compiles `CompileFrom`, merges `Generate` into `Children`, and
+recurses. That is the entire mechanism — nothing else happens between your
+tree and the output directory.
 
-## Dev mode
+</details>
 
-`BuildOptions.Dev` skips deleting the output directory and overwrites files in
-place, so a running dev server keeps its file handles and inodes:
+Open `build/index.html` in a browser, or serve the folder with any static file
+server.
 
-```
-go run . --dev
-```
+## Next
 
-Without it, `Build` removes the output directory first so stale files can't
-survive a rename.
-
-## Serving it locally
-
-Any static file server works. Python's is already installed on most systems:
-
-```
-cd build && python3 -m http.server 8000
-```
-
-## Where to go next
-
-[The Node tree](../the-node-tree/) is the one page worth reading in full —
-everything else builds on it. After that, pick what you need:
-[markdown content](../content-and-collections/), [locales](../i18n/),
-[client-side Go](../wasmwrap/).
+- [The Node tree](../the-node-tree/) — nodes, children, copying, `Build`.
+- [Ctx & URLs](../ctx/) — what pages receive, and how to build URLs.
+- [Content & collections](../content-and-collections/) — markdown with front matter.
+- [Locales & i18n](../i18n/) — one tree, many languages.
+- [Dev server](../dev-server/) — watch, rebuild, reload while you work.

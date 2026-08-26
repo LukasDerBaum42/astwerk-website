@@ -19,39 +19,51 @@ templ ExampleTemplBasics(c ssg.Ctx, prev, next *templates.NavItem) {
 		</p>
 
 		<h2 id="components">Components</h2>
-		<p>
-			A component is a function that renders markup. Parameters are plain Go
-			values, so a component is called like a function and typed by the
-			compiler.
-		</p>
-		@templates.CodeBlockTempl(templBasicsSrc)
+		@pieceTempl("A component is a function", templBasicsComponentsSrc) {
+			<p>
+				Parameters are plain Go values, so a component is called like a
+				function and typed by the compiler.
+			</p>
+		}
+
+		<h2 id="expressions">Expressions and escaping</h2>
+		@pieceTempl("Escaping by default", templBasicsEscapingSrc) {
+			<p>
+				<code>{ "{" } expr { "}" }</code> interpolates a value, HTML-escaped by default —
+				<code>&amp; &lt; &gt; " '</code> all come out escaped, so a
+				user-provided name cannot inject markup. Escaping is per context:
+				element text, attribute, URL and CSS each get their own rules.
+			</p>
+		}
 
 		<h2 id="composition">Composition and children</h2>
-		<p>
-			Components nest with <code>{ "@" }Component(...)</code>. A component that
-			accepts children declares them with <code>{ "{" } children... { "}" }</code>, and
-			the caller wraps it instead of passing content in as a parameter —
-			that is the shape <code>starter/layout/base_layout.templ</code> uses.
-		</p>
-		<h2 id="expressions">Expressions and escaping</h2>
-		<p>
-			<code>{ "{" } expr { "}" }</code> interpolates a value, HTML-escaped by default.
-			Escaping is per context — element text, attribute, URL and CSS each
-			get their own rules — so user data cannot inject markup, and trusted
-			HTML is the opt-in <code>templ.Raw</code>, never the default.
-		</p>
+		@pieceTempl("Nesting", templBasicsChildrenSrc) {
+			<p>
+				Components nest with <code>{ "@" }Component(...)</code>. A component that
+				accepts children declares them with <code>{ "{" } children... { "}" }</code>, and
+				the caller wraps it instead of passing content in as a parameter —
+				that is the shape <code>starter/layout/base_layout.templ</code> uses.
+			</p>
+		}
+
 		<h2 id="flow">Conditionals and loops</h2>
-		<p>
-			<code>{ "if" }</code> and <code>{ "for" }</code> are Go, written inline in the
-			markup. There is no template language to learn beyond what you already
-			know.
-		</p>
+		@pieceTempl("Go, inline", templBasicsFlowSrc) {
+			<p>
+				<code>if</code> and <code>for</code> are Go, written inline in the
+				markup. There is no template language to learn beyond what you already
+				know.
+			</p>
+		}
+
 		<h2 id="attributes">Attributes</h2>
-		<p>
-			Attributes take Go expressions: <code>disabled?={ "{" } cond { "}" }</code> emits
-			the attribute only when the condition holds, and helpers like
-			<code>templ.URL</code> and <code>templ.Class</code> apply the right
-			escaping for their context.
-		</p>
+		@pieceTempl("Escaping per context", templBasicsAttrsSrc) {
+			<p>
+				Attributes take Go expressions: <code>disabled?={ "{" } cond { "}" }</code> emits
+				the attribute only when the condition holds, and helpers like
+				<code>templ.URL</code> and <code>templ.Class</code> apply the right
+				escaping for their context. Trusted HTML is the opt-in
+				<code>templ.Raw</code>, never the default.
+			</p>
+		}
 	}
 }

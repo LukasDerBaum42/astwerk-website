@@ -8,6 +8,14 @@ Group = "Reference"
 astwerk has three moving parts worth understanding. None of them is large; all of
 them are readable in one sitting.
 
+## The three mechanisms
+
+| Mechanism | Where it lives | What it does |
+| --- | --- | --- |
+| The walker | `ssg/build.go` | depth-first recursion that writes the output |
+| Locale derivation | `ssg/locale.go` | mirrors the base tree per locale, applies overrides |
+| Dependency tracking | `reactive/signal.go` | signal reads register with the running effect |
+
 ## The walker
 
 `Build` is a depth-first recursion over `Node`. There is no plugin pipeline, no
@@ -102,7 +110,8 @@ them was a bug during development: `Untracked` has to stop dependencies being
 recorded *without* orphaning effects created inside it, and with one variable
 doing both jobs those effects escaped their parent and were never disposed.
 
-### Change detection with an unconstrained type
+<details>
+<summary>Change detection with an unconstrained type</summary>
 
 `Signal[T]` accepts any `T`, so `==` isn't available at compile time. Comparison
 goes through `any`, which works for comparable dynamic types and panics for
@@ -122,7 +131,10 @@ func equalValues[T any](a, b T) (eq bool) {
 Recovering to "not equal" is the safe direction: a spurious re-run is wasteful,
 a missed one is a bug.
 
-### Why no virtual DOM
+</details>
+
+<details>
+<summary>Why no virtual DOM</summary>
 
 A VDOM exists to make "re-render everything" cheap. Fine-grained bindings make it
 unnecessary — a binding knows which property it owns, so it writes that property
@@ -133,7 +145,10 @@ The cost is that you write bindings instead of templates for interactive parts.
 The benefit is that nothing is ever destroyed and rebuilt behind your back, so
 focus, scroll position and transitions survive without special handling.
 
-## Reading the source
+</details>
+
+<details>
+<summary>Reading the source, and this site</summary>
 
 Roughly in order of how much they'll teach you:
 
@@ -151,15 +166,12 @@ pure Go and gets fast host tests, while only the DOM half needs node. Two real
 bugs surfaced that way — the ownership split above, and `BindList` disposing the
 very entries it was reusing.
 
-## This site
-
-Built with astwerk, source at [astwerk-website](https://github.com/LukasDerBaum42/astwerk-website).
-It's a nested Go module with a `replace` pointing at the parent, so it always
-builds against the working tree — if a change breaks the library's own
-documentation site, the site stops building.
-
-Writing it found four gaps that nothing else had: no base-path support (every link
-broke under `/astwerk/`), no way to configure the markdown renderer (so no syntax
+This site is built with astwerk, source at
+[astwerk-website](https://github.com/LukasDerBaum42/astwerk-website). Writing it
+found four gaps that nothing else had: no base-path support (every link broke
+under `/astwerk/`), no way to configure the markdown renderer (so no syntax
 highlighting), no locale-independent path for a language switcher, and no
 `InsertBefore` for keyed list ordering. All four are in the library now. That is
 what a real test is for.
+
+</details>

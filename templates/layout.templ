@@ -14,9 +14,11 @@ type NavItem struct {
 }
 
 // SubItem is one in-page anchor, shown nested under its page's sidebar entry.
+// Deep marks an h3 subsection, indented under its h2.
 type SubItem struct {
 	Label  string
 	Anchor string // "#some-heading", appended to the page's own link
+	Deep   bool
 }
 
 // NavGroup is a labelled cluster of sidebar entries. A sidebar with one group
@@ -39,6 +41,9 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ pageTitle(c.Title) }</title>
 			<link rel="icon" href={ c.Asset("public/favicon.svg") } type="image/svg+xml"/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap"/>
 			<link rel="stylesheet" href={ c.Asset("style/style.css") }/>
 			<link rel="stylesheet" href={ c.Asset("style/code.css") }/>
 			<link rel="canonical" href={ "https://lukasderbaum42.github.io" + c.URL() }/>
@@ -47,11 +52,13 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 			<meta property="og:type" content="website"/>
 			<script>
 				// Applied before paint, so a saved preference never flashes the
-				// wrong theme. Dark is the default: no key means no attribute, and
-				// the stylesheet's :root is already dark.
+				// wrong theme or accent. Dark is the default: no key means no attribute,
+				// and the stylesheet's :root is already dark.
 				(() => {
 					const t = localStorage.getItem("theme");
 					if (t === "light") document.documentElement.dataset.theme = "light";
+					const a = localStorage.getItem("accent");
+					if (a) document.documentElement.dataset.accent = a;
 				})();
 			</script>
 		</head>
@@ -90,7 +97,11 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 										if len(item.Sub) > 0 {
 											<ul class="sidebar-sub">
 												for _, sub := range item.Sub {
-													<li><a href={ templ.SafeURL(c.Link(item.Path) + sub.Anchor) }>{ sub.Label }</a></li>
+													if sub.Deep {
+														<li><a class="deep" href={ templ.SafeURL(c.Link(item.Path) + sub.Anchor) }>{ sub.Label }</a></li>
+													} else {
+														<li><a href={ templ.SafeURL(c.Link(item.Path) + sub.Anchor) }>{ sub.Label }</a></li>
+													}
 												}
 											</ul>
 										}
@@ -117,6 +128,7 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 					is in the repo.
 				</p>
 			</footer>
+			<button class="back-to-top" type="button" aria-label="Back to top">&uarr;</button>
 			<script>
 				(() => {
 					const btn = document.getElementById("theme-toggle");
@@ -131,6 +143,169 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 						}
 					});
 				})();
+			</script>
+			<script>
+				// Give every highlighted block a header with a copy button.
+				// Templ snippets carry their own header; markdown fences get one
+				// added here so the two look identical.
+				(() => {
+					const copyText = (text) => {
+						if (navigator.clipboard && window.isSecureContext) {
+							return navigator.clipboard.writeText(text);
+						}
+						return new Promise((resolve, reject) => {
+							const ta = document.createElement("textarea");
+							ta.value = text;
+							ta.style.position = "fixed";
+							ta.style.opacity = "0";
+							document.body.appendChild(ta);
+							ta.select();
+							try {
+								document.execCommand("copy");
+								resolve();
+							} catch (err) {
+								reject(err);
+							} finally {
+								document.body.removeChild(ta);
+							}
+						});
+					};
+
+					document.querySelectorAll("pre.chroma").forEach((pre) => {
+						let box = pre.closest(".code");
+						if (!box) {
+							box = document.createElement("div");
+							box.className = "code";
+							pre.parentNode.insertBefore(box, pre);
+							box.appendChild(pre);
+						}
+						let header = box.querySelector(".code-header");
+						if (!header) {
+							header = document.createElement("div");
+							header.className = "code-header";
+							const lang = document.createElement("span");
+							lang.className = "code-lang";
+							lang.textContent = "code";
+							header.appendChild(lang);
+							box.insertBefore(header, box.firstChild);
+						}
+						if (!box.querySelector("[data-copy]")) {
+							const btn = document.createElement("button");
+							btn.type = "button";
+							btn.className = "code-copy";
+							btn.setAttribute("data-copy", "");
+							btn.textContent = "Copy";
+							header.appendChild(btn);
+						}
+					});
+
+					document.addEventListener("click", (e) => {
+						const btn = e.target.closest ? e.target.closest("[data-copy]") : null;
+						if (!btn) return;
+						const box = btn.closest(".code");
+						const pre = box && box.querySelector("pre.chroma");
+						if (!pre) return;
+						const text = pre.textContent.replace(/\n$/, "");
+						copyText(text).then(() => {
+							btn.textContent = "Copied";
+							btn.dataset.copied = "true";
+							setTimeout(() => {
+								btn.textContent = "Copy";
+								delete btn.dataset.copied;
+							}, 1600);
+						}).catch(() => {
+							btn.textContent = "Failed";
+							setTimeout(() => { btn.textContent = "Copy"; }, 1600);
+						});
+					});
+				})();
+			</script>
+			<script>
+				// Highlight the in-page heading the reader is currently at, and
+				// show a back-to-top button once they have scrolled.
+				(() => {
+					const subLinks = Array.from(document.querySelectorAll(".sidebar-sub a"));
+					const headings = subLinks
+						.map((a) => {
+							const id = (a.getAttribute("href") || "").split("#")[1];
+							return id ? document.getElementById(id) : null;
+						})
+						.filter(Boolean);
+
+					const back = document.querySelector(".back-to-top");
+
+					const setCurrent = (i) => {
+						subLinks.forEach((a, j) => a.classList.toggle("active", j === i));
+					};
+
+					const onScroll = () => {
+						if (back) {
+							back.classList.toggle("visible", window.scrollY > 400);
+						}
+						if (!headings.length) return;
+						const top = 104; // sticky topbar offset
+						let idx = -1;
+						headings.forEach((h, i) => {
+							if (h.getBoundingClientRect().top <= top) idx = i;
+						});
+						setCurrent(idx);
+					};
+
+					document.addEventListener("scroll", onScroll, { passive: true });
+					if (back) back.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+					onScroll();
+				})();
+			</script>
+			<script>
+				// Tutorial quizzes: pick an option, see right/wrong plus the
+				// explanation. A correct answer ticks the step's progress box by
+				// reusing its change listener.
+				document.addEventListener("click", (e) => {
+					const btn = e.target.closest ? e.target.closest(".quiz-option, .quiz-reset") : null;
+					if (!btn) return;
+					const quiz = btn.closest(".quiz");
+					if (!quiz) return;
+
+					if (btn.classList.contains("quiz-reset")) {
+						quiz.querySelectorAll(".quiz-option").forEach((b) => {
+							b.disabled = false;
+							b.classList.remove("right", "wrong");
+						});
+						const fb = quiz.querySelector(".quiz-feedback");
+						if (fb) { fb.textContent = ""; fb.classList.remove("right", "wrong"); }
+						const why = quiz.querySelector(".quiz-why");
+						if (why) why.hidden = true;
+						btn.hidden = true;
+						delete quiz.dataset.done;
+						return;
+					}
+
+					if (quiz.dataset.done) return;
+					const correct = Number(quiz.dataset.correct);
+					const picked = Number(btn.dataset.opt);
+					const fb = quiz.querySelector(".quiz-feedback");
+					const why = quiz.querySelector(".quiz-why");
+					const reset = quiz.querySelector(".quiz-reset");
+
+					quiz.querySelectorAll(".quiz-option").forEach((b, i) => {
+						b.disabled = true;
+						if (i === correct) b.classList.add("right");
+					});
+					if (picked === correct) {
+						if (fb) { fb.textContent = "Correct."; fb.classList.add("right"); }
+						const box = document.querySelector(".step-progress [data-step]");
+						if (box && !box.checked) {
+							box.checked = true;
+							box.dispatchEvent(new Event("change"));
+						}
+					} else {
+						btn.classList.add("wrong");
+						if (fb) { fb.textContent = "Not quite — the correct answer is highlighted."; fb.classList.add("wrong"); }
+					}
+					if (why) why.hidden = false;
+					if (reset) reset.hidden = false;
+					quiz.dataset.done = "1";
+				});
 			</script>
 		</body>
 	</html>

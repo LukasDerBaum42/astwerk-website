@@ -9,163 +9,121 @@ The `content` package reads markdown files with TOML front matter. Combined with
 `Node.Generate`, that gives you a collection: one index page plus one page per
 file.
 
-## The API
+## Documentation
+
+### Page
 
 ```go
 type Page struct {
-	Meta map[string]any // front matter between +++ markers
-	HTML string         // rendered markdown body
+	Meta map[string]any // front matter between +++ markers, or nil
+	HTML string         // the rendered markdown body
 }
-
-func Load(path string) (Page, error)
-func Parse(src string) (Page, error)
-func LoadDir(dir string) (map[string]Page, error)
-func LoadTree(dir string) (map[string]Page, error)
-func Slugs(pages map[string]Page) []string
-func Decode[T any](p Page) (T, error)
-func Chunk[T any](items []T, size int) [][]T
 ```
 
-`LoadDir` is non-recursive and reads `*.md` only, keyed by filename without the
-extension — the slug.
+`Page` is what every loader returns. The front matter fence is
+`content.Delimiter` (`"+++"`); a document without a leading fence is all body.
+`Meta` is the raw front matter map — `Decode` turns it into your own struct.
 
-`LoadTree` is the recursive one, keyed by path relative to `dir` without the
-extension: `content/blog/2024/hello.md` becomes `2024/hello`. Keys are
-slash-separated on every platform, and `Node.Children` keys may contain
-slashes — so a `LoadTree` result drops into a tree and nests itself:
+### Load and Parse
+
+```go
+func Load(path string) (Page, error)
+func Parse(src string) (Page, error)
+```
+
+`Load` reads a file, `Parse` takes a string. Both render through goldmark with
+raw HTML passed through, so a page can drop into hand-written markup.
+
+### LoadDir and LoadTree
+
+```go
+func LoadDir(dir string) (map[string]Page, error)  // non-recursive, keyed by slug
+func LoadTree(dir string) (map[string]Page, error) // recursive, keys like "2024/hello"
+```
+
+`LoadDir` reads the `*.md` files in one directory, keyed by filename without
+the extension — the slug. `LoadTree` is the recursive variant, keyed by path
+relative to `dir`: `content/blog/2024/hello.md` becomes `2024/hello`. Keys are
+slash-separated on every platform and may nest, so they drop straight into
+`Node.Children`:
 
 ```go
 Generate: func() map[string]ssg.Node {
 	pages, _ := content.LoadTree("content/blog")
 	out := map[string]ssg.Node{}
 	for _, slug := range content.Slugs(pages) { // "2024/hello"
-		out[slug] = ssg.Node{Page: post(pages[slug])} // /blog/2024/hello/
+		out[slug] = ssg.Node{Page: post(pages[slug])}
 	}
 	return out
 },
 ```
 
-Nothing is special-cased: `blog/index.md` is the key `blog/index`, like any
-other file.
+### Slugs
 
-## Front matter is yours
+```go
+func Slugs(pages map[string]Page) []string // sorted — always range this
+```
 
-`Meta` is deliberately a generic map, not a fixed struct. Every site wants
-different fields, so `Decode` unmarshals into whatever struct you define:
+Ranging the map directly gives a different order on every build, which shuffles
+any index page built from it.
+
+<details>
+<summary>How this bit the first site</summary>
+
+The first site built with astwerk produced byte-identical output on every page
+*except* the collection index, which shuffled its tiles on each run. `Slugs`
+exists so that failure mode is one explicit call away from impossible.
+
+</details>
+
+### Decode
+
+```markdown
++++
+Title = "Dice Dungeon"
+Description = "A roguelike"
+Tags = ["game", "go"]
++++
+
+Body here.
+```
 
 ```go
 type FrontMatter struct {
 	Title       string
 	Description string
 	Tags        []string
-	Draft       bool
 }
 
 fm, err := content.Decode[FrontMatter](page)
 ```
 
-A file looks like this:
+Front matter is deliberately a generic map, not a fixed struct — every site
+wants different fields, so `Decode` unmarshals into whatever you define. A page
+with no front matter decodes to the zero value without error.
 
-```markdown
-+++
-Title = "Dice Dungeon"
-Description = "A roguelike built in a week"
-Tags = ["game", "go"]
-+++
+<details>
+<summary>Why Meta is a map, not a struct</summary>
 
-# Dice Dungeon
+There is no front matter schema the library could know — every site wants
+different fields. So `Page.Meta` stays a generic map and `Decode` is the
+bridge to your own struct: the map is the storage, your struct is the
+interface.
 
-Real markdown from here on, and <span>inline HTML</span> passes through.
-```
+</details>
 
-A page with no front matter decodes to the zero value without error, so an
-undecorated markdown file is still valid.
-
-## Always range over Slugs
-
-`LoadDir` returns a map, and Go randomises map iteration order. Range it
-directly and your index page reshuffles on every build, producing a diff for no
-reason:
-
-```go
-// Wrong — order changes every build:
-for slug, p := range pages { … }
-
-// Right:
-for _, slug := range content.Slugs(pages) {
-	p := pages[slug]
-	…
-}
-```
-
-This is worth the explicit call. It was found the hard way: the first site
-migrated to astwerk produced byte-identical output on every page *except* the
-collection index, which shuffled its tiles each run.
-
-## A collection
-
-`Generate` runs at build time and returns children to merge in. Point it at a
-content directory:
-
-```go
-func projects(dir string) ssg.Node {
-	pages, err := content.LoadDir(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var tiles []templ.Component
-	children := map[string]ssg.Node{}
-
-	for _, slug := range content.Slugs(pages) {
-		fm, _ := content.Decode[FrontMatter](pages[slug])
-		body := pages[slug].HTML
-
-		children[slug] = ssg.Node{
-			Title: fm.Title,
-			Page: func(c ssg.Ctx) templ.Component {
-				return views.ProjectPage(c.Title, c.Path, c.Prefix, body)
-			},
-		}
-		tiles = append(tiles, views.Tile(fm.Title, fm.Description, slug))
-	}
-
-	return ssg.Node{
-		Title: "Projects",
-		Page: func(c ssg.Ctx) templ.Component {
-			return views.ProjectIndex(c.Title, c.Path, c.Prefix, tiles)
-		},
-		Children: children,
-	}
-}
-```
-
-Use it as one line in the tree:
-
-```go
-"projects": projects("content/projects"),
-```
-
-Notice there is no path arithmetic. Each child gets its path from the walker, so
-adding a markdown file adds a page and a tile with nothing else to update.
-
-Tile links should be bare slugs — `href="thing/"` — so they resolve relative to
-whichever index page they're on. The same tile then works at `/projects/` and
-`/de/projects/` with no prefix threading.
-
-## Paging a long collection
-
-`Chunk` splits a slice into groups of at most `size`, in order. That's all it
-does, and that's on purpose:
+### Chunk
 
 ```go
 func Chunk[T any](items []T, size int) [][]T
 ```
 
-Turning those groups into pages is three lines, and every site wants them
-slightly differently — whether page one is the index or `/page/1/`, what the
-pager looks like, whether the URL says "page" at all. There's no repetition left
-to abstract there, so `Chunk` stops at the arithmetic:
+Splits a slice into groups of at most `size`, in order, for paginating a
+collection. It's deliberately just the arithmetic — turning the groups into
+pages is three lines, and every site wants them slightly differently.
+
+<details>
+<summary>Paging a collection</summary>
 
 ```go
 "blog": {
@@ -188,12 +146,12 @@ to abstract there, so `Chunk` stops at the arithmetic:
 A `size` of zero or less returns one group holding everything, so a site that
 hasn't decided on a page size yet doesn't have to special-case it.
 
-## Markdown rendering
+</details>
 
-By default, goldmark with raw HTML enabled, so a page can drop into hand-written
-markup where markdown runs out.
+### Custom markdown
 
-To add extensions, build your own goldmark and pass it to a `Loader`:
+The default renderer is goldmark with raw HTML enabled. To add extensions,
+build your own goldmark and pass it to a `Loader`:
 
 ```go
 md := goldmark.New(
@@ -210,6 +168,43 @@ md := goldmark.New(
 pages, err := content.NewLoader(md).LoadDir("content/docs")
 ```
 
-The docs you're reading are rendered exactly that way. Highlighting happens at
-build time via chroma, so no JavaScript highlighter ships to your browser — the
-`<span>` classes in the code blocks above are in the HTML.
+The docs you're reading are rendered exactly that way — highlighting happens at
+build time via chroma, so no JavaScript highlighter ships to the browser.
+
+## Example
+
+```go
+func projects(dir string) ssg.Node {
+	pages, err := content.LoadDir(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var tiles []templ.Component
+	children := map[string]ssg.Node{}
+	for _, slug := range content.Slugs(pages) {
+		fm, _ := content.Decode[FrontMatter](pages[slug])
+		body := pages[slug].HTML
+
+		children[slug] = ssg.Node{
+			Title: fm.Title,
+			Page:  func(c ssg.Ctx) templ.Component {
+				return views.ProjectPage(c.Title, c.Path, c.Prefix, body)
+			},
+		}
+		tiles = append(tiles, views.Tile(fm.Title, fm.Description, slug))
+	}
+
+	return ssg.Node{
+		Title:    "Projects",
+		Page:     func(c ssg.Ctx) templ.Component { return views.ProjectIndex(c.Title, c.Path, c.Prefix, tiles) },
+		Children: children,
+	}
+}
+
+// "projects": projects("content/projects"),
+```
+
+Each child gets its path from the walker, so adding a markdown file adds a page
+and a tile with nothing else to update. Tile links should be bare slugs
+(`href="thing/"`) so they resolve relative to whichever index page they're on.

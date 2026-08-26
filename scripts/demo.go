@@ -5,12 +5,18 @@
 // It hydrates markup the site already generated rather than building any DOM
 // from scratch, which is the pattern the docs recommend: one source of markup,
 // surgical updates, and a page that still reads with WebAssembly disabled.
+//
+// Every demo here has a compiled-markup twin on the x side of the Examples
+// page — same behaviour, different implementation — so the two can be compared
+// feature for feature.
 package main
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/LukasDerBaum42/astwerk/reactive"
@@ -21,8 +27,11 @@ func main() {
 	counter()
 	todoList()
 	formDemo()
+	bindingsDemo()
 	asyncDemo()
 	canvasDemo()
+	stopwatchDemo()
+	filterDemo()
 
 	// Keep the module alive: main returning would tear down every handler.
 	select {}
@@ -30,24 +39,24 @@ func main() {
 
 func counter() {
 	count := reactive.NewSignal(0)
-	parity := reactive.Computed(func() string {
-		if count.Get()%2 == 0 {
-			return "even"
-		}
-		return "odd"
-	})
+	doubled := reactive.Computed(func() int { return count.Get() * 2 })
 
 	reactive.Hydrate("#counter", func(root wasmwrap.Element) {
 		reactive.BindText(root.Find("[data-count]"), func() string {
 			return strconv.Itoa(count.Get())
 		})
-		reactive.BindText(root.Find("[data-parity]"), parity.Get)
+		reactive.BindText(root.Find("[data-doubled]"), func() string {
+			return strconv.Itoa(doubled.Get())
+		})
 
 		reactive.On(root.Find("[data-inc]"), "click", func(wasmwrap.Event) {
 			count.Update(func(v int) int { return v + 1 })
 		})
 		reactive.On(root.Find("[data-dec]"), "click", func(wasmwrap.Event) {
 			count.Update(func(v int) int { return v - 1 })
+		})
+		reactive.On(root.Find("[data-reset]"), "click", func(wasmwrap.Event) {
+			count.Set(0)
 		})
 	})
 }
@@ -62,32 +71,25 @@ func todoList() {
 		{ID: "1", Text: "Read the docs"},
 		{ID: "2", Text: "Build something"},
 	})
-	nextID := 2
 
 	reactive.Hydrate("#todo", func(root wasmwrap.Element) {
 		field := root.Find("[data-new]")
 		draft := reactive.NewSignal("")
 		reactive.BindValue(field, draft)
 
-		add := func() {
-			if draft.Get() == "" {
-				return
-			}
-			nextID++
-			id := strconv.Itoa(nextID)
-			text := draft.Get()
-			reactive.Batch(func() {
-				items.Update(func(all []item) []item {
-					return append(all, item{ID: id, Text: text})
-				})
-				draft.Set("")
-			})
-		}
-
 		// Submit rather than click, so the Enter key works too.
 		reactive.On(root.Find("[data-form]"), "submit", func(e wasmwrap.Event) {
 			e.PreventDefault()
-			add()
+			text := strings.TrimSpace(draft.Get())
+			if text == "" {
+				return
+			}
+			reactive.Batch(func() {
+				items.Update(func(all []item) []item {
+					return append(all, item{ID: fmt.Sprintf("%d", len(all)+1), Text: text})
+				})
+				draft.Set("")
+			})
 		})
 
 		reactive.BindText(root.Find("[data-remaining]"), func() string {
@@ -98,7 +100,6 @@ func todoList() {
 			func(it item) string { return it.ID },
 			func(it item) wasmwrap.Element {
 				row := wasmwrap.Create("li")
-				text := wasmwrap.Create("input").SetInputValue(it.Text)
 				remove := wasmwrap.Create("button").SetText("remove")
 				remove.Class().Add("remove")
 
@@ -109,35 +110,66 @@ func todoList() {
 						})
 					})
 				})
-				return row.Append(text, remove)
+				return row.Append(wasmwrap.Create("span").SetText(it.Text), remove)
 			})
 	})
 }
 
-// formDemo two-way binds a text field and a checkbox, and drives a computed
-// summary and a conditional panel from the same two signals.
+// formDemo two-way binds two number fields, derives a total from them, and
+// lets a checkbox reveal a panel — the same features as the x forms demo.
 func formDemo() {
 	reactive.Hydrate("#form-demo", func(root wasmwrap.Element) {
-		name := reactive.NewSignal("")
-		subscribed := reactive.NewSignal(false)
+		price := reactive.NewSignal(10.0)
+		qty := reactive.NewSignal(2.0)
+		total := reactive.Computed(func() float64 { return price.Get() * qty.Get() })
+		tax := reactive.NewSignal(false)
 
-		reactive.BindValue(root.Find("[data-name]"), name)
-		reactive.BindChecked(root.Find("[data-subscribe]"), subscribed)
-
-		reactive.BindText(root.Find("[data-summary]"), func() string {
-			n := name.Get()
-			if n == "" {
-				n = "there"
-			}
-			if subscribed.Get() {
-				return "Hi " + n + " — you're on the list."
-			}
-			return "Hi " + n + " — not subscribed yet."
+		reactive.BindNumber(root.Find("[data-price]"), price)
+		reactive.BindNumber(root.Find("[data-qty]"), qty)
+		reactive.BindText(root.Find("[data-total]"), func() string {
+			return fmt.Sprintf("%.2f", total.Get())
 		})
+		reactive.BindChecked(root.Find("[data-tax]"), tax)
 
-		// BindShow, not BindWhen: the panel keeps no state worth discarding, so
-		// toggling visibility is all this needs.
-		reactive.BindShow(root.Find("[data-thanks]"), subscribed.Get)
+		// BindShow, not BindWhen: the note keeps no state, so toggling
+		// visibility is all this needs.
+		reactive.BindShow(root.Find("[data-tax-note]"), tax.Get)
+	})
+}
+
+// bindingsDemo drives four one-property bindings — href, class, disabled,
+// style — from four signals, each owned by a control button. The WASM twin
+// of the x attribute-bindings demo.
+func bindingsDemo() {
+	reactive.Hydrate("#bindings-demo", func(root wasmwrap.Element) {
+		url := reactive.NewSignal("https://templ.guide")
+		active := reactive.NewSignal(true)
+		busy := reactive.NewSignal(false)
+		colour := reactive.NewSignal("#4f7cff")
+
+		reactive.BindAttr(root.Find("[data-bind-href]"), "href", url.Get)
+		reactive.BindClass(root.Find("[data-bind-class]"), "on", active.Get)
+		reactive.BindAttr(root.Find("[data-bind-disabled]"), "disabled", func() string {
+			if busy.Get() {
+				return "disabled"
+			}
+			return "" // empty removes the attribute
+		})
+		reactive.BindStyle(root.Find("[data-bind-style]"), "color", colour.Get)
+
+		toggle := func(s *reactive.Signal[bool]) func(wasmwrap.Event) {
+			return func(wasmwrap.Event) {
+				s.Update(func(v bool) bool { return !v })
+			}
+		}
+		reactive.On(root.Find("[data-toggle-class]"), "click", toggle(active))
+		reactive.On(root.Find("[data-toggle-disabled]"), "click", toggle(busy))
+		reactive.On(root.Find("[data-recolour]"), "click", func(wasmwrap.Event) {
+			colour.Set("#ff4f7c")
+		})
+		reactive.On(root.Find("[data-retarget]"), "click", func(wasmwrap.Event) {
+			url.Set("https://pkg.go.dev/github.com/LukasDerBaum42/astwerk")
+		})
 	})
 }
 
@@ -220,5 +252,79 @@ func canvasDemo() {
 			}
 			running = !running
 		})
+	})
+}
+
+// stopwatchDemo is a running stopwatch: wasmwrap.SetInterval ticks a signal,
+// and bindings render it like anything else.
+func stopwatchDemo() {
+	reactive.Hydrate("#stopwatch-demo", func(root wasmwrap.Element) {
+		elapsed := reactive.NewSignal(0.0)
+		var cancel func()
+		running := false
+
+		start := root.Find("[data-start]")
+		reactive.BindText(root.Find("[data-time]"), func() string {
+			v := elapsed.Get()
+			ms := int(v*1000) % 1000 / 100
+			sec := int(v) % 60
+			min := int(v) / 60
+			return fmt.Sprintf("%d:%02d.%d", min, sec, ms)
+		})
+
+		reactive.On(start, "click", func(wasmwrap.Event) {
+			if running {
+				cancel()
+				start.SetText("Resume")
+			} else {
+				cancel = wasmwrap.SetInterval(func() {
+					elapsed.Update(func(v float64) float64 { return v + 0.1 })
+				}, 100)
+				start.SetText("Pause")
+			}
+			running = !running
+		})
+		reactive.On(root.Find("[data-reset]"), "click", func(wasmwrap.Event) {
+			elapsed.Set(0)
+		})
+	})
+}
+
+// filterDemo filters a list through a two-way bound search box: the query
+// signal drives a Computed slice, and BindList renders whatever it contains.
+func filterDemo() {
+	reactive.Hydrate("#filter-demo", func(root wasmwrap.Element) {
+		posts := []post{
+			{ID: "1", Title: "Signals track their own dependencies"},
+			{ID: "2", Title: "Keyed lists move nodes instead of rebuilding them"},
+			{ID: "3", Title: "A binding owns exactly the property it writes"},
+			{ID: "4", Title: "Computed values chain and gate"},
+			{ID: "5", Title: "The escape hatch is plain Go"},
+		}
+		query := reactive.NewSignal("")
+		reactive.BindValue(root.Find("[data-query]"), query)
+
+		matches := reactive.Computed(func() []post {
+			q := strings.ToLower(strings.TrimSpace(query.Get()))
+			if q == "" {
+				return posts
+			}
+			var out []post
+			for _, p := range posts {
+				if strings.Contains(strings.ToLower(p.Title), q) {
+					out = append(out, p)
+				}
+			}
+			return out
+		})
+
+		reactive.BindText(root.Find("[data-count]"), func() string {
+			return strconv.Itoa(len(matches.Get()))
+		})
+		reactive.BindList(root.Find("[data-results]"), matches.Get,
+			func(p post) string { return p.ID },
+			func(p post) wasmwrap.Element {
+				return wasmwrap.Create("li").SetText(p.Title)
+			})
 	})
 }

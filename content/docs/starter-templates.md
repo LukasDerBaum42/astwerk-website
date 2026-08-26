@@ -9,20 +9,31 @@ Group = "Reference"
 `content` references it. Once the files are in your project they are your code —
 no base class, nothing to override, nothing that breaks when astwerk updates.
 
-## Getting them
+<details>
+<summary>Why copy, not import</summary>
 
-Download the `starter/` folder from the repo, drop it into your project, then fix
-the placeholder import path:
+A template library would be a dependency with opinions: it would pin component
+signatures, force updates whenever astwerk changes, and hand you a base class
+to override. Copied files are your code — change anything, and an astwerk
+update can't break them.
 
-```
-grep -rl example.com/yoursite . | xargs sed -i 's|example.com/yoursite|YOUR/MODULE/PATH|g'
-templ generate
-```
+</details>
 
-The directories are separate Go packages; flatten them if you prefer. The only
-cross-package references are `pages/` and `content/` importing `layout`.
+## Documentation
 
-## What's there
+### The x widgets
+
+`widgets/` uses [`x`](../x/) — a real import, so unlike the placeholder paths it
+needs no rewriting. Three rules:
+
+- **Wrap the page content in `x.Document`.** That is what emits the generated
+  script; outside it the widgets still render, just statically.
+- **Name anything a script reads** with `x.Named`, so the script can call
+  `count.get()`.
+- **Treat a `<script>` as the escape hatch** for anything a combinator can't
+  say — see `widgets/todo.templ`.
+
+### The files
 
 | File | Purpose |
 | --- | --- |
@@ -44,14 +55,8 @@ cross-package references are `pages/` and `content/` importing `layout`.
 | `meta/seo_head.templ` | description, Open Graph and Twitter tags |
 | `meta/rss_feed.templ` | RSS 2.0 feed over a `[]FeedItem` |
 
-`widgets/` uses [`x`](../x/) — compiled reactive markup. The `x` package is a
-real import (`github.com/LukasDerBaum42/astwerk/x`), so unlike the placeholder
-paths it needs no rewriting. Three rules: wrap the page content in
-`x.Document` (that is what emits the generated script), name anything a script
-reads with `x.Named`, and treat the `<script>` as the escape hatch for anything
-a combinator can't say.
-
-## Why they're shaped this way
+<details>
+<summary>Why they're shaped this way</summary>
 
 **Pages take `(title, path, prefix)`**, which is exactly what `ssg.Templ` fills
 in, so a starter page drops into a tree with no adapter:
@@ -64,19 +69,26 @@ in, so a starter page drops into a tree with no adapter:
 whichever index page they're on, and work unchanged inside a locale subtree.
 
 **`rss_feed.templ` marshals with `encoding/xml`** rather than writing markup.
-`<link>` is a void element in HTML and templ's parser is HTML-aware, so written as
-markup it self-closes and you get a feed whose items have no links at all.
-Marshalling avoids that and gets escaping right.
+`<link>` is a void element in HTML and templ's parser is HTML-aware, so written
+as markup it self-closes and you get a feed whose items have no links at all.
 
 **`wasm_script.templ` passes its path via `data-wasm`.** templ treats `<script>`
 contents as raw text, so an interpolated expression in the body would be emitted
 literally.
 
-Two of these were bugs found by writing the files and rendering the output. They
-are the reason the starter set is worth copying rather than writing from scratch.
+</details>
 
-## Generating in place
+## Example
 
-Copy the files out before running `templ generate`. Generating inside an astwerk
-checkout produces `_templ.go` files importing the placeholder path, which breaks
+Copy the folder, fix the placeholder import path, generate:
+
+```sh
+cp -r starter/* .   # or download the folder from GitHub
+grep -rl example.com/yoursite . | xargs sed -i 's|example.com/yoursite|YOUR/MODULE/PATH|g'
+templ generate
+```
+
+The directories are separate Go packages; flatten them if you prefer. Copy the
+files out before running `templ generate`: generating inside an astwerk checkout
+produces `_templ.go` files importing the placeholder path, which breaks
 `go build ./...` there.

@@ -22,9 +22,11 @@ type NavItem struct {
 }
 
 // SubItem is one in-page anchor, shown nested under its page's sidebar entry.
+// Deep marks an h3 subsection, indented under its h2.
 type SubItem struct {
 	Label  string
 	Anchor string // "#some-heading", appended to the page's own link
+	Deep   bool
 }
 
 // NavGroup is a labelled cluster of sidebar entries. A sidebar with one group
@@ -67,7 +69,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(pageTitle(c.Title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 40, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 42, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -80,20 +82,20 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var3 templ.SafeURL
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(c.Asset("public/favicon.svg"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 41, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 43, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" type=\"image/svg+xml\"><link rel=\"stylesheet\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" type=\"image/svg+xml\"><link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap\"><link rel=\"stylesheet\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(c.Asset("style/style.css"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 42, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 47, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -106,7 +108,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var5 templ.SafeURL
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(c.Asset("style/code.css"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 43, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 48, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -119,7 +121,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var6 templ.SafeURL
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs("https://lukasderbaum42.github.io" + c.URL())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 44, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 49, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -132,20 +134,20 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageTitle(c.Title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 46, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 51, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><meta property=\"og:type\" content=\"website\"><script>\n\t\t\t\t// Applied before paint, so a saved preference never flashes the\n\t\t\t\t// wrong theme. Dark is the default: no key means no attribute, and\n\t\t\t\t// the stylesheet's :root is already dark.\n\t\t\t\t(() => {\n\t\t\t\t\tconst t = localStorage.getItem(\"theme\");\n\t\t\t\t\tif (t === \"light\") document.documentElement.dataset.theme = \"light\";\n\t\t\t\t})();\n\t\t\t</script></head><body><a class=\"skip\" href=\"#main\">Skip to content</a><header class=\"topbar\"><a class=\"brand\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><meta property=\"og:type\" content=\"website\"><script>\n\t\t\t\t// Applied before paint, so a saved preference never flashes the\n\t\t\t\t// wrong theme or accent. Dark is the default: no key means no attribute,\n\t\t\t\t// and the stylesheet's :root is already dark.\n\t\t\t\t(() => {\n\t\t\t\t\tconst t = localStorage.getItem(\"theme\");\n\t\t\t\t\tif (t === \"light\") document.documentElement.dataset.theme = \"light\";\n\t\t\t\t\tconst a = localStorage.getItem(\"accent\");\n\t\t\t\t\tif (a) document.documentElement.dataset.accent = a;\n\t\t\t\t})();\n\t\t\t</script></head><body><a class=\"skip\" href=\"#main\">Skip to content</a><header class=\"topbar\"><a class=\"brand\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 templ.SafeURL
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(""))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 61, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 68, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -158,7 +160,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var9 templ.SafeURL
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 65, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 72, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -171,7 +173,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(ariaCurrent(c.Path, "docs"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 65, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 72, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 		if templ_7745c5c3_Err != nil {
@@ -184,7 +186,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var11 templ.SafeURL
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("tutorial/"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 66, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 73, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -197,7 +199,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(ariaCurrent(c.Path, "tutorial"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 66, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 73, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
@@ -210,7 +212,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var13 templ.SafeURL
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 67, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 74, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -223,7 +225,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(ariaCurrent(c.Path, "examples"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 67, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 74, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 		if templ_7745c5c3_Err != nil {
@@ -241,7 +243,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(sidebarTitle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 81, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 88, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -264,7 +266,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 					var templ_7745c5c3_Var16 string
 					templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(group.Title)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 85, Col: 53}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 92, Col: 53}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 					if templ_7745c5c3_Err != nil {
@@ -284,7 +286,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 						var templ_7745c5c3_Var17 templ.SafeURL
 						templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(item.Path))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 89, Col: 37}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 96, Col: 37}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 						if templ_7745c5c3_Err != nil {
@@ -297,7 +299,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 						var templ_7745c5c3_Var18 string
 						templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 89, Col: 87}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 96, Col: 87}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 						if templ_7745c5c3_Err != nil {
@@ -313,81 +315,114 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 								return templ_7745c5c3_Err
 							}
 							for _, sub := range item.Sub {
-								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<li><a href=\"")
-								if templ_7745c5c3_Err != nil {
-									return templ_7745c5c3_Err
-								}
-								var templ_7745c5c3_Var19 templ.SafeURL
-								templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(c.Link(item.Path) + sub.Anchor))
-								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 93, Col: 72}
-								}
-								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
-								if templ_7745c5c3_Err != nil {
-									return templ_7745c5c3_Err
-								}
-								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\">")
-								if templ_7745c5c3_Err != nil {
-									return templ_7745c5c3_Err
-								}
-								var templ_7745c5c3_Var20 string
-								templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(sub.Label)
-								if templ_7745c5c3_Err != nil {
-									return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 93, Col: 86}
-								}
-								_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
-								if templ_7745c5c3_Err != nil {
-									return templ_7745c5c3_Err
-								}
-								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</a></li>")
-								if templ_7745c5c3_Err != nil {
-									return templ_7745c5c3_Err
+								if sub.Deep {
+									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<li><a class=\"deep\" href=\"")
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									var templ_7745c5c3_Var19 templ.SafeURL
+									templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(c.Link(item.Path) + sub.Anchor))
+									if templ_7745c5c3_Err != nil {
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 101, Col: 86}
+									}
+									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\">")
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									var templ_7745c5c3_Var20 string
+									templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(sub.Label)
+									if templ_7745c5c3_Err != nil {
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 101, Col: 100}
+									}
+									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</a></li>")
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+								} else {
+									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<li><a href=\"")
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									var templ_7745c5c3_Var21 templ.SafeURL
+									templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(c.Link(item.Path) + sub.Anchor))
+									if templ_7745c5c3_Err != nil {
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 103, Col: 73}
+									}
+									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\">")
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									var templ_7745c5c3_Var22 string
+									templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(sub.Label)
+									if templ_7745c5c3_Err != nil {
+										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 103, Col: 87}
+									}
+									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
+									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</a></li>")
+									if templ_7745c5c3_Err != nil {
+										return templ_7745c5c3_Err
+									}
 								}
 							}
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</ul>")
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</ul>")
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
 						}
 					} else {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<a href=\"")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<a href=\"")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var21 templ.SafeURL
-						templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(item.Path))
+						var templ_7745c5c3_Var23 templ.SafeURL
+						templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(item.Path))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 98, Col: 37}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 109, Col: 37}
 						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\">")
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var22 string
-						templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 98, Col: 52}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</a>")
+						var templ_7745c5c3_Var24 string
+						templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 109, Col: 52}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</a>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</nav>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</nav>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</aside><main id=\"main\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</aside><main id=\"main\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -395,12 +430,12 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<main id=\"main\" class=\"wide\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<main id=\"main\" class=\"wide\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -408,12 +443,12 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<footer class=\"footer\"><p>astwerk is MIT licensed. This site is built with astwerk — <a href=\"https://github.com/LukasDerBaum42/astwerk-website\">its own source</a> is in the repo.</p></footer><script>\n\t\t\t\t(() => {\n\t\t\t\t\tconst btn = document.getElementById(\"theme-toggle\");\n\t\t\t\t\tbtn.addEventListener(\"click\", () => {\n\t\t\t\t\t\tconst light = document.documentElement.dataset.theme === \"light\";\n\t\t\t\t\t\tif (light) {\n\t\t\t\t\t\t\tdelete document.documentElement.dataset.theme;\n\t\t\t\t\t\t\tlocalStorage.setItem(\"theme\", \"dark\");\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tdocument.documentElement.dataset.theme = \"light\";\n\t\t\t\t\t\t\tlocalStorage.setItem(\"theme\", \"light\");\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<footer class=\"footer\"><p>astwerk is MIT licensed. This site is built with astwerk — <a href=\"https://github.com/LukasDerBaum42/astwerk-website\">its own source</a> is in the repo.</p></footer><button class=\"back-to-top\" type=\"button\" aria-label=\"Back to top\">&uarr;</button><script>\n\t\t\t\t(() => {\n\t\t\t\t\tconst btn = document.getElementById(\"theme-toggle\");\n\t\t\t\t\tbtn.addEventListener(\"click\", () => {\n\t\t\t\t\t\tconst light = document.documentElement.dataset.theme === \"light\";\n\t\t\t\t\t\tif (light) {\n\t\t\t\t\t\t\tdelete document.documentElement.dataset.theme;\n\t\t\t\t\t\t\tlocalStorage.setItem(\"theme\", \"dark\");\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tdocument.documentElement.dataset.theme = \"light\";\n\t\t\t\t\t\t\tlocalStorage.setItem(\"theme\", \"light\");\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// Give every highlighted block a header with a copy button.\n\t\t\t\t// Templ snippets carry their own header; markdown fences get one\n\t\t\t\t// added here so the two look identical.\n\t\t\t\t(() => {\n\t\t\t\t\tconst copyText = (text) => {\n\t\t\t\t\t\tif (navigator.clipboard && window.isSecureContext) {\n\t\t\t\t\t\t\treturn navigator.clipboard.writeText(text);\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn new Promise((resolve, reject) => {\n\t\t\t\t\t\t\tconst ta = document.createElement(\"textarea\");\n\t\t\t\t\t\t\tta.value = text;\n\t\t\t\t\t\t\tta.style.position = \"fixed\";\n\t\t\t\t\t\t\tta.style.opacity = \"0\";\n\t\t\t\t\t\t\tdocument.body.appendChild(ta);\n\t\t\t\t\t\t\tta.select();\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tdocument.execCommand(\"copy\");\n\t\t\t\t\t\t\t\tresolve();\n\t\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\t\treject(err);\n\t\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\t\tdocument.body.removeChild(ta);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t};\n\n\t\t\t\t\tdocument.querySelectorAll(\"pre.chroma\").forEach((pre) => {\n\t\t\t\t\t\tlet box = pre.closest(\".code\");\n\t\t\t\t\t\tif (!box) {\n\t\t\t\t\t\t\tbox = document.createElement(\"div\");\n\t\t\t\t\t\t\tbox.className = \"code\";\n\t\t\t\t\t\t\tpre.parentNode.insertBefore(box, pre);\n\t\t\t\t\t\t\tbox.appendChild(pre);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tlet header = box.querySelector(\".code-header\");\n\t\t\t\t\t\tif (!header) {\n\t\t\t\t\t\t\theader = document.createElement(\"div\");\n\t\t\t\t\t\t\theader.className = \"code-header\";\n\t\t\t\t\t\t\tconst lang = document.createElement(\"span\");\n\t\t\t\t\t\t\tlang.className = \"code-lang\";\n\t\t\t\t\t\t\tlang.textContent = \"code\";\n\t\t\t\t\t\t\theader.appendChild(lang);\n\t\t\t\t\t\t\tbox.insertBefore(header, box.firstChild);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (!box.querySelector(\"[data-copy]\")) {\n\t\t\t\t\t\t\tconst btn = document.createElement(\"button\");\n\t\t\t\t\t\t\tbtn.type = \"button\";\n\t\t\t\t\t\t\tbtn.className = \"code-copy\";\n\t\t\t\t\t\t\tbtn.setAttribute(\"data-copy\", \"\");\n\t\t\t\t\t\t\tbtn.textContent = \"Copy\";\n\t\t\t\t\t\t\theader.appendChild(btn);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\t\t\tconst btn = e.target.closest ? e.target.closest(\"[data-copy]\") : null;\n\t\t\t\t\t\tif (!btn) return;\n\t\t\t\t\t\tconst box = btn.closest(\".code\");\n\t\t\t\t\t\tconst pre = box && box.querySelector(\"pre.chroma\");\n\t\t\t\t\t\tif (!pre) return;\n\t\t\t\t\t\tconst text = pre.textContent.replace(/\\n$/, \"\");\n\t\t\t\t\t\tcopyText(text).then(() => {\n\t\t\t\t\t\t\tbtn.textContent = \"Copied\";\n\t\t\t\t\t\t\tbtn.dataset.copied = \"true\";\n\t\t\t\t\t\t\tsetTimeout(() => {\n\t\t\t\t\t\t\t\tbtn.textContent = \"Copy\";\n\t\t\t\t\t\t\t\tdelete btn.dataset.copied;\n\t\t\t\t\t\t\t}, 1600);\n\t\t\t\t\t\t}).catch(() => {\n\t\t\t\t\t\t\tbtn.textContent = \"Failed\";\n\t\t\t\t\t\t\tsetTimeout(() => { btn.textContent = \"Copy\"; }, 1600);\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// Highlight the in-page heading the reader is currently at, and\n\t\t\t\t// show a back-to-top button once they have scrolled.\n\t\t\t\t(() => {\n\t\t\t\t\tconst subLinks = Array.from(document.querySelectorAll(\".sidebar-sub a\"));\n\t\t\t\t\tconst headings = subLinks\n\t\t\t\t\t\t.map((a) => {\n\t\t\t\t\t\t\tconst id = (a.getAttribute(\"href\") || \"\").split(\"#\")[1];\n\t\t\t\t\t\t\treturn id ? document.getElementById(id) : null;\n\t\t\t\t\t\t})\n\t\t\t\t\t\t.filter(Boolean);\n\n\t\t\t\t\tconst back = document.querySelector(\".back-to-top\");\n\n\t\t\t\t\tconst setCurrent = (i) => {\n\t\t\t\t\t\tsubLinks.forEach((a, j) => a.classList.toggle(\"active\", j === i));\n\t\t\t\t\t};\n\n\t\t\t\t\tconst onScroll = () => {\n\t\t\t\t\t\tif (back) {\n\t\t\t\t\t\t\tback.classList.toggle(\"visible\", window.scrollY > 400);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (!headings.length) return;\n\t\t\t\t\t\tconst top = 104; // sticky topbar offset\n\t\t\t\t\t\tlet idx = -1;\n\t\t\t\t\t\theadings.forEach((h, i) => {\n\t\t\t\t\t\t\tif (h.getBoundingClientRect().top <= top) idx = i;\n\t\t\t\t\t\t});\n\t\t\t\t\t\tsetCurrent(idx);\n\t\t\t\t\t};\n\n\t\t\t\t\tdocument.addEventListener(\"scroll\", onScroll, { passive: true });\n\t\t\t\t\tif (back) back.addEventListener(\"click\", () => window.scrollTo({ top: 0, behavior: \"smooth\" }));\n\t\t\t\t\tonScroll();\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// Tutorial quizzes: pick an option, see right/wrong plus the\n\t\t\t\t// explanation. A correct answer ticks the step's progress box by\n\t\t\t\t// reusing its change listener.\n\t\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\t\tconst btn = e.target.closest ? e.target.closest(\".quiz-option, .quiz-reset\") : null;\n\t\t\t\t\tif (!btn) return;\n\t\t\t\t\tconst quiz = btn.closest(\".quiz\");\n\t\t\t\t\tif (!quiz) return;\n\n\t\t\t\t\tif (btn.classList.contains(\"quiz-reset\")) {\n\t\t\t\t\t\tquiz.querySelectorAll(\".quiz-option\").forEach((b) => {\n\t\t\t\t\t\t\tb.disabled = false;\n\t\t\t\t\t\t\tb.classList.remove(\"right\", \"wrong\");\n\t\t\t\t\t\t});\n\t\t\t\t\t\tconst fb = quiz.querySelector(\".quiz-feedback\");\n\t\t\t\t\t\tif (fb) { fb.textContent = \"\"; fb.classList.remove(\"right\", \"wrong\"); }\n\t\t\t\t\t\tconst why = quiz.querySelector(\".quiz-why\");\n\t\t\t\t\t\tif (why) why.hidden = true;\n\t\t\t\t\t\tbtn.hidden = true;\n\t\t\t\t\t\tdelete quiz.dataset.done;\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (quiz.dataset.done) return;\n\t\t\t\t\tconst correct = Number(quiz.dataset.correct);\n\t\t\t\t\tconst picked = Number(btn.dataset.opt);\n\t\t\t\t\tconst fb = quiz.querySelector(\".quiz-feedback\");\n\t\t\t\t\tconst why = quiz.querySelector(\".quiz-why\");\n\t\t\t\t\tconst reset = quiz.querySelector(\".quiz-reset\");\n\n\t\t\t\t\tquiz.querySelectorAll(\".quiz-option\").forEach((b, i) => {\n\t\t\t\t\t\tb.disabled = true;\n\t\t\t\t\t\tif (i === correct) b.classList.add(\"right\");\n\t\t\t\t\t});\n\t\t\t\t\tif (picked === correct) {\n\t\t\t\t\t\tif (fb) { fb.textContent = \"Correct.\"; fb.classList.add(\"right\"); }\n\t\t\t\t\t\tconst box = document.querySelector(\".step-progress [data-step]\");\n\t\t\t\t\t\tif (box && !box.checked) {\n\t\t\t\t\t\t\tbox.checked = true;\n\t\t\t\t\t\t\tbox.dispatchEvent(new Event(\"change\"));\n\t\t\t\t\t\t}\n\t\t\t\t\t} else {\n\t\t\t\t\t\tbtn.classList.add(\"wrong\");\n\t\t\t\t\t\tif (fb) { fb.textContent = \"Not quite — the correct answer is highlighted.\"; fb.classList.add(\"wrong\"); }\n\t\t\t\t\t}\n\t\t\t\t\tif (why) why.hidden = false;\n\t\t\t\t\tif (reset) reset.hidden = false;\n\t\t\t\t\tquiz.dataset.done = \"1\";\n\t\t\t\t});\n\t\t\t</script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

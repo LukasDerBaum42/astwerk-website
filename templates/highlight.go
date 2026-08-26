@@ -40,6 +40,12 @@ func HighlightTempl(src string) string {
 	return Highlight(src, "templ")
 }
 
+// HighlightHTML renders HTML source as highlighted HTML, for showing the
+// markup markers generate.
+func HighlightHTML(src string) string {
+	return Highlight(src, "html")
+}
+
 // Highlight renders source with the named chroma lexer, falling back to
 // escaped plain text when the lexer is missing or fails.
 func Highlight(src, name string) string {

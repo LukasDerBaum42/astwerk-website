@@ -201,15 +201,21 @@ func exampleRoot() ssg.Node {
 	renderers := []func(ssg.Ctx, *templates.NavItem, *templates.NavItem) templ.Component{
 		pages.ExampleOverview,
 		pages.ExampleXCounter,
+		pages.ExampleXTodo,
 		pages.ExampleXForms,
 		pages.ExampleXBindings,
-		pages.ExampleXTodo,
+		pages.ExampleXAsync,
+		pages.ExampleXCanvas,
+		pages.ExampleXFaq,
 		pages.ExampleXUnderTheHood,
 		pages.ExampleCounter,
 		pages.ExampleList,
 		pages.ExampleForms,
+		pages.ExampleBindings,
 		pages.ExampleAsync,
 		pages.ExampleCanvas,
+		pages.ExampleStopwatch,
+		pages.ExampleFilter,
 		pages.ExampleTemplBasics,
 		pages.ExampleTreeAndContent,
 		pages.ExampleScriptsAndRouting,
@@ -336,10 +342,9 @@ var headingRe = regexp.MustCompile(`(?s)<h([23])>(.*?)</h[23]>`)
 var tagRe = regexp.MustCompile(`<[^>]+>`)
 
 // withHeadingAnchors gives every h2/h3 in html an id (goldmark doesn't add
-// one on its own) and collects the h2s as sidebar subsections. h3s get an
-// anchor to link to but aren't listed in the sidebar — one level of nesting
-// is what "subsections" means there; going deeper would bury the page list
-// the sidebar exists to navigate.
+// one on its own) and collects them as sidebar subsections — h2s top-level,
+// h3s nested under them. The h3s are the API names a docs page is organised
+// by, so listing them keeps "on this page" useful.
 func withHeadingAnchors(html string) (string, []templates.SubItem) {
 	var subs []templates.SubItem
 	seen := map[string]int{}
@@ -355,8 +360,8 @@ func withHeadingAnchors(html string) (string, []templates.SubItem) {
 		}
 		seen[slug]++
 
-		if level == "2" {
-			subs = append(subs, templates.SubItem{Label: text, Anchor: "#" + slug})
+		if level == "2" || level == "3" {
+			subs = append(subs, templates.SubItem{Label: text, Anchor: "#" + slug, Deep: level == "3"})
 		}
 		return fmt.Sprintf(`<h%s id="%s">%s</h%s>`, level, slug, inner, level)
 	})
