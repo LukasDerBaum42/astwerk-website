@@ -10,6 +10,10 @@ rather than virtual-DOM based: a binding updates exactly the property it owns,
 and a keyed list moves nodes rather than rebuilding them. Nothing here re-renders
 a tree and diffs the result.
 
+The lightweight path is [`x`](../x/): the same reactive model, compiled to plain
+JavaScript at build time, with no WASM and no framework. `reactive` is for the
+cases that need full Go in the browser.
+
 See it running on the [Examples](../../examples/) page.
 
 ## Signals

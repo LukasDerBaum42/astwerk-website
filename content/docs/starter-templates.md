@@ -1,6 +1,6 @@
 +++
 Title = "Starter templates"
-Description = "Thirteen copyable .templ files. Copied, never imported."
+Description = "Seventeen copyable .templ files. Copied, never imported."
 Order = 80
 Group = "Reference"
 +++
@@ -35,10 +35,21 @@ cross-package references are `pages/` and `content/` importing `layout`.
 | `pages/home.templ` | front page, near-empty on purpose |
 | `pages/about.templ` | a plain one-off page |
 | `pages/not_found.templ` | 404 page, with wiring instructions |
+| `pages/reactive.templ` | a page of `widgets/`, wrapped in `x.Document` |
+| `widgets/counter.templ` | counter with increment/reset, a toggle-`When` section and a title effect |
+| `widgets/todo.templ` | two-way input + keyed list, with the script escape hatch for add |
+| `widgets/price.templ` | computed value over two two-way number inputs |
 | `wasm/wasm_script.templ` | loads a `.wasm` build plus `wasm_exec.js` |
 | `wasm/canvas_host.templ` | sized `<canvas>` paired with its script |
 | `meta/seo_head.templ` | description, Open Graph and Twitter tags |
 | `meta/rss_feed.templ` | RSS 2.0 feed over a `[]FeedItem` |
+
+`widgets/` uses [`x`](../x/) — compiled reactive markup. The `x` package is a
+real import (`github.com/LukasDerBaum42/astwerk/x`), so unlike the placeholder
+paths it needs no rewriting. Three rules: wrap the page content in
+`x.Document` (that is what emits the generated script), name anything a script
+reads with `x.Named`, and treat the `<script>` as the escape hatch for anything
+a combinator can't say.
 
 ## Why they're shaped this way
 

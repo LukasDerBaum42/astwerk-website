@@ -63,6 +63,7 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 				</a>
 				<nav class="topnav">
 					<a href={ c.Link("docs/") } aria-current={ ariaCurrent(c.Path, "docs") }>Docs</a>
+					<a href={ c.Link("tutorial/") } aria-current={ ariaCurrent(c.Path, "tutorial") }>Tutorial</a>
 					<a href={ c.Link("examples/") } aria-current={ ariaCurrent(c.Path, "examples") }>Examples</a>
 					<a href="https://pkg.go.dev/github.com/LukasDerBaum42/astwerk">API</a>
 					<a href="https://github.com/LukasDerBaum42/astwerk">GitHub</a>

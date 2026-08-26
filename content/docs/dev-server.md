@@ -19,42 +19,73 @@ import "github.com/LukasDerBaum42/astwerk/devserver"
 
 func main() {
 	serve := flag.Bool("serve", false, "serve and rebuild on change")
+	dev := flag.Bool("dev", false, "overwrite the output in place")
 	flag.Parse()
 
-	if *serve {
-		devserver.Run(context.Background(), devserver.Config{
-			Build: func() error { return build(true) },
-		})
+	if !*serve {
+		// The one-shot build — and what --serve shells out to.
+		if err := ssg.Build(tree(), ssg.BuildOptions{Dev: *dev}); err != nil {
+			log.Fatal(err)
+		}
 		return
 	}
-	if err := build(false); err != nil {
-		log.Fatal(err)
-	}
-}
 
-func build(dev bool) error {
-	return ssg.Build(tree(), ssg.BuildOptions{Dev: dev})
+	devserver.Run(context.Background(), devserver.Config{
+		Build: devserver.Steps(
+			devserver.Command("templ", "generate"),
+			devserver.Command("go", "run", ".", "--dev"),
+		),
+	})
 }
 ```
 
 ```
 go run . --serve
-2026/07/30 21:19:52 built build/
-2026/07/30 21:19:52 serving build/ on http://127.0.0.1:8080
-2026/07/30 21:20:24 changed: content/docs/getting-started.md, rebuilding
-2026/07/30 21:20:27 rebuilt in 3.009s, reloading
+2026/07/30 23:28:03 built build/
+2026/07/30 23:28:03 serving build/ on http://127.0.0.1:8080
+2026/07/30 23:28:12 changed: templates/layout.templ, rebuilding
+2026/07/30 23:28:15 rebuilt in 3.701s, reloading
 ```
 
-Two things about that `Build` function are worth doing deliberately.
+## Build must run out of process
 
-**Pass `Dev: true`.** A normal build removes the output directory first. A
-browser fetching an asset mid-rebuild then gets a 404 for a file that exists a
-moment later. Dev mode overwrites in place instead.
+Look at what `Build` is above: two commands, not a Go function that renders
+your site. That is the most important thing on this page.
 
-**Build the tree inside the function, not outside it.** `Build` is called again
-on every change, so anything read at startup — a content directory, a config
-file — has to be read inside it or your edits won't show up. If your build
-already looks like `buildSite()`, you're fine.
+**A running Go program cannot load new code.** Your pages are compiled templ
+components. If `Build` calls your render functions directly, it re-renders the
+components that were compiled into the binary that started the dev server —
+the ones from before your edit. So you save a `.templ` file, the watcher fires,
+the build "succeeds", the browser reloads, and the page is identical.
+
+That is worse than nothing happening, because everything about it looks like it
+worked. There is no error, and the log cheerfully says `rebuilt`.
+
+`devserver.Command` and `devserver.Steps` are the fix. They run the build as a
+subprocess, which recompiles, which is what makes the change real:
+
+```go
+func devserver.Command(name string, args ...string) func() error
+func devserver.Steps(steps ...func() error) func() error
+```
+
+`Command` treats a non-zero exit as a failed build and puts the command's
+combined output in the error — so a compiler message lands in the browser
+overlay, file and line included, instead of only in your terminal.
+
+An in-process closure is only correct if everything the build reads is *data* —
+markdown, CSS, images — and never compiled Go. It's faster, and it becomes a
+trap the moment a `.templ` file is involved.
+
+Two more things worth doing deliberately:
+
+**Pass `--dev` to the inner build.** A normal build removes the output
+directory first, so a browser fetching an asset mid-rebuild gets a 404 for a
+file that exists a moment later. Dev mode overwrites in place instead.
+
+**Read your content inside the build, not at startup.** The inner build is a
+fresh process each time, so this comes free — but it's the same reason an
+in-process build has to load its content per call rather than once.
 
 ## Config
 
@@ -62,7 +93,7 @@ Only `Build` is required.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `Build` | — | rebuilds the site; called once at startup and on every change |
+| `Build` | — | rebuilds the site; called once at startup and on every change. Use `Command`/`Steps` |
 | `Dir` | `"build"` | the directory to serve |
 | `Addr` | `"localhost:8080"` | listen address; `"localhost:0"` picks a free port |
 | `Watch` | `["."]` | directories watched for changes |

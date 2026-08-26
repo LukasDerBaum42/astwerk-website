@@ -10,3 +10,19 @@ templ CodeBlock(src string) {
 		@templ.Raw(HighlightGo(src))
 	</div>
 }
+
+// CodeBlockJS renders a JavaScript snippet with syntax highlighting, for
+// showing the output the markers generate.
+templ CodeBlockJS(src string) {
+	<div class="code">
+		@templ.Raw(HighlightJS(src))
+	</div>
+}
+
+// CodeBlockTempl renders a templ snippet with syntax highlighting: markup as
+// HTML, Go inside { expressions } and @component calls as Go.
+templ CodeBlockTempl(src string) {
+	<div class="code">
+		@templ.Raw(HighlightTempl(src))
+	</div>
+}

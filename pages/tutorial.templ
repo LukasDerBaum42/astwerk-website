@@ -1,0 +1,335 @@
+package pages
+
+import (
+	"github.com/LukasDerBaum42/astwerk-website/templates"
+	x "github.com/LukasDerBaum42/astwerk/x"
+	"github.com/LukasDerBaum42/astwerk/ssg"
+)
+
+// tutCount is the state behind the live counter on the interactivity step.
+var tutCount = x.Named("count", 0)
+
+// counter is the live widget from step 8, running on the tutorial page itself.
+templ counter() {
+	<div class="demo">
+		@x.Text(tutCount)
+		@x.El("button", x.On("click", tutCount.Set(tutCount.Add(1)))) {
+			+
+		}
+	</div>
+}
+
+// TutorialNav is the sidebar for the tutorial, in step order: an overview and
+// ten steps, each building on the last.
+var TutorialNav = []templates.NavGroup{
+	{
+		Items: []templates.NavItem{
+			{Label: "Build a site", Path: "tutorial/"},
+			{Label: "1. Setup", Path: "tutorial/1-setup/"},
+			{Label: "2. The tree", Path: "tutorial/2-the-tree/"},
+			{Label: "3. A layout", Path: "tutorial/3-a-layout/"},
+			{Label: "4. More pages", Path: "tutorial/4-more-pages/"},
+			{Label: "5. A collection", Path: "tutorial/5-a-collection/"},
+			{Label: "6. Styles", Path: "tutorial/6-styles/"},
+			{Label: "7. A locale", Path: "tutorial/7-a-locale/"},
+			{Label: "8. Interactivity", Path: "tutorial/8-interactivity/"},
+			{Label: "9. The dev loop", Path: "tutorial/9-the-dev-loop/"},
+			{Label: "10. Ship it", Path: "tutorial/10-ship-it/"},
+		},
+	},
+}
+
+// tutorialPage wraps one step in the tutorial sidebar and pager.
+templ tutorialPage(c ssg.Ctx, prev, next *templates.NavItem) {
+	@templates.Layout(c, "Tutorial", TutorialNav) {
+		<article class="prose">
+			{ children... }
+		</article>
+		<nav class="pager">
+			if prev != nil {
+				<a class="prev" href={ c.Link(prev.Path) }>
+					<span>Previous</span>{ prev.Label }
+				</a>
+			}
+			if next != nil {
+				<a class="next" href={ c.Link(next.Path) }>
+					<span>Next</span>{ next.Label }
+				</a>
+			}
+		</nav>
+	}
+}
+
+// checkpoint is a callout listing the files a step should have produced.
+templ checkpoint(files ...string) {
+	<aside class="checkpoint">
+		<p><strong>Checkpoint</strong> — your files so far:</p>
+		<ul>
+			for _, f := range files {
+				<li><code>{ f }</code></li>
+			}
+		</ul>
+	</aside>
+}
+
+templ TutorialOverview(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>Build a site</h1>
+		<p class="lede">
+			Ten steps from an empty directory to a complete site: pages, a
+			layout, a markdown collection, a locale, a live widget, and a dev
+			loop. Each step is one change — follow them in order, and every
+			snippet here is the whole change for its step. You need Go and the
+			templ CLI.
+		</p>
+		<pre class="install"><code>go install github.com/a-h/templ/cmd/templ@latest</code></pre>
+		<p>
+			The finished site is plain static HTML that deploys anywhere. If you
+			would rather copy a starting point than type one, the
+			<a href={ c.Link("docs/starter-templates/") }>starter templates</a>
+			are this same shape, pre-written.
+		</p>
+	}
+}
+
+templ TutorialSetup(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>1. Setup</h1>
+		<p>
+			A new module, and the two dependencies: astwerk itself, and templ —
+			astwerk pages are templ components, and the CLI compiles
+			<code>.templ</code> files to Go.
+		</p>
+		@templates.CodeBlock(setupSrc)
+		<p>
+			That is the entire setup. There is no config file, no project
+			scaffold, and no hidden convention scanner — the next step is
+			writing the site.
+		</p>
+		@checkpoint("go.mod", "go.sum")
+	}
+}
+
+templ TutorialTree(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>2. The tree</h1>
+		<p>
+			astwerk's entire build mechanism is one function that walks a tree.
+			You describe the output directory as Go values — one
+			<code>ssg.Node</code> per directory — and call <code>ssg.Build</code>.
+			The tree root is the site root; <code>Page</code> renders its
+			<code>index.html</code>.
+		</p>
+		@templates.CodeBlock(tutStep2Main)
+		<p>
+			<code>ssg.Templ</code> adapts a templ component with the
+			<code>(title, path, prefix)</code> signature, and the walker fills
+			the values in — so a page never has to be told where it lives. The
+			first page, <code>pages/home.templ</code>:
+		</p>
+		@templates.CodeBlockTempl(tutStep2Home)
+		<p>Generate the Go and build:</p>
+		@templates.CodeBlock(buildCmds)
+		<p>
+			That writes <code>build/index.html</code> — whatever the component
+			renders, verbatim. There is no scanner and no config; the tree is
+			the site.
+		</p>
+		@checkpoint("main.go", "pages/home.templ")
+	}
+}
+
+templ TutorialLayout(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>3. A layout</h1>
+		<p>
+			A real page wants <code>&lt;html&gt;</code>/<code>&lt;head&gt;</code>/
+			<code>&lt;body&gt;</code> and a nav — the wrong thing to repeat per
+			page. Give the shell its own component that takes children,
+			<code>pages/layout.templ</code>:
+		</p>
+		@templates.CodeBlockTempl(tutLayout)
+		<p>
+			<code>{ children... }</code> is templ's children mechanism: a caller
+			wraps the component instead of passing content in as a parameter.
+			Every link goes through <code>prefix</code>, so the same layout
+			works in every locale. The home page now wraps it:
+		</p>
+		@templates.CodeBlockTempl(tutHome)
+		@checkpoint("pages/layout.templ")
+	}
+}
+
+templ TutorialMorePages(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>4. More pages</h1>
+		<p>
+			A page is one entry in the tree — nothing else.
+			<code>pages/about.templ</code>:
+		</p>
+		@templates.CodeBlockTempl(tutAbout)
+		<p>And one entry in the tree:</p>
+		@templates.CodeBlock(tutTreeAddAbout)
+		<p>
+			That writes <code>build/about/index.html</code>. The
+			<code>Title</code> is what the walker hands the page as its
+			<code>title</code> argument — every page gets its title, path and
+			locale from the tree it lives in.
+		</p>
+		@checkpoint("pages/about.templ")
+	}
+}
+
+templ TutorialCollection(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>5. A collection</h1>
+		<p>
+			The list-plus-detail pattern — an index page and one page per
+			markdown file — is what the <code>content</code> package exists for.
+			Drop a file in <code>content/projects/</code>:
+		</p>
+		@templates.CodeBlock(tutProjectMD)
+		<p>
+			The <code>+++</code> block is TOML front matter; the rest renders as
+			HTML. The two pages — the index and one page per file — go in
+			<code>pages/projects.templ</code>:
+		</p>
+		@templates.CodeBlockTempl(tutProjects)
+		<p>
+			<code>main.go</code> gains one function that reads the directory and
+			returns a subtree. This is the whole collection mechanism, and it is
+			just Go:
+		</p>
+		@templates.CodeBlock(tutMain)
+		<p>
+			<code>content.Slugs</code> gives a stable, sorted order (a map range
+			would reshuffle the index every build). Each page closure receives
+			its <code>ssg.Ctx</code> — title, path, prefix — from the walker,
+			same as every other page. Rebuild and you have
+			<code>build/projects/</code>, <code>build/projects/hello/</code> and
+			one page per file you add from now on.
+		</p>
+		@checkpoint("content/projects/hello.md", "pages/projects.templ")
+	}
+}
+
+templ TutorialStyles(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>6. Styles</h1>
+		<p>
+			<code>CopyFrom</code> copies a directory into the build as-is — the
+			escape hatch for anything that isn't a page. Add
+			<code>style/style.css</code>, tell the layout about it, and put it
+			in the tree:
+		</p>
+		@templates.CodeBlockTempl(tutStyleLink)
+		@templates.CodeBlock(tutStyleTree)
+		@checkpoint("style/style.css")
+	}
+}
+
+templ TutorialLocale(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>7. A locale</h1>
+		<p>
+			A locale's subtree is derived from the base tree — you never write
+			the site twice. One line mounts a German mirror of everything:
+		</p>
+		@templates.CodeBlock(tutLocale)
+		<p>
+			Rebuild and every page exists under <code>/de/</code> too, rendered
+			by the same components with <code>prefix</code> set to
+			<code>/de</code> — nav links and <code>&lt;html lang&gt;</code>
+			included. The <code>Override</code> map is for the pages that
+			genuinely differ; everything else is mirrored on its own. See
+			<a href={ c.Link("docs/i18n/") }>Locales &amp; i18n</a>.
+		</p>
+	}
+}
+
+templ TutorialInteractivity(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>8. Interactivity</h1>
+		<p class="lede">
+			Static until now. The <code>x</code> package adds live behaviour
+			without WASM: markers are templ components that render the current
+			value <em>and</em> generate the JavaScript that keeps it live, in
+			the same call. The counter below is running right now.
+		</p>
+		@x.Document(counter())
+		<p><code>pages/home.templ</code>:</p>
+		@templates.CodeBlockTempl(tutHomeWithCounter)
+		<ul>
+			<li><code>x.Named</code> creates the state under a fixed name, so
+				hand-written scripts can read it.</li>
+			<li><code>x.Text</code> renders the value and generates the binding
+				that keeps it in sync; <code>x.On</code> does the same for the
+				handler.</li>
+			<li><code>x.Document</code> emits the runtime and state declarations
+				before its body and the bindings after it.</li>
+			<li>View source on this page: the bindings are embedded right here,
+				and no <code>.wasm</code> was downloaded. Disable JavaScript and
+				the value still renders — it was written statically at build
+				time.</li>
+		</ul>
+		<p>
+			The full marker set — bindings, forms, lists, effects — is in
+			<a href={ c.Link("docs/x/") }>x — compiled reactive markup</a>.
+		</p>
+	}
+}
+
+templ TutorialDevloop(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>9. The dev loop</h1>
+		<p>
+			<code>go run .</code> is fine once, but you want the build to watch
+			and rebuild. The <code>devserver</code> package is that loop. Move
+			the tree into a helper so both branches build the same site, and
+			add <code>--serve</code>:
+		</p>
+		@templates.CodeBlock(tutMainServe)
+		<p>
+			The build runs out of process, because a running Go program cannot
+			load new code — editing a <code>.templ</code> recompiles, rebuilds,
+			and reloads the browser. A failed build shows its compiler error in
+			the browser instead of silently serving the last good output. See
+			<a href={ c.Link("docs/dev-server/") }>Dev server</a>.
+		</p>
+	}
+}
+
+templ TutorialShipIt(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		<h1>10. Ship it</h1>
+		<p>
+			The build directory is the site. Serve it from anywhere — the files
+			are plain HTML, CSS and a little JavaScript, with no runtime to
+			install.
+		</p>
+		<p>
+			One thing worth knowing before deploying: the layout writes
+			<code>/style/style.css</code> and <code>/projects/</code> — fine at
+			a domain root, wrong under a subpath (GitHub project Pages serve
+			from <code>/repo/</code>). If your site will live under a subpath,
+			resolve URLs with <code>Ctx.Asset</code>/<code>Ctx.Link</code> and
+			build with <code>RelativeURLs: true</code>; the same build then
+			works from disk, at a localhost root, and deployed — see
+			<a href={ c.Link("docs/the-node-tree/") }>The Node tree</a>.
+		</p>
+		<p>
+			That's the whole framework: a tree of nodes, pages as templ
+			components, collections from markdown, locales derived not written,
+			and interactivity compiled at build time. Everything else — the
+			router, WASM scripting, SEO head, RSS — is documented under the
+			pages on the left.
+		</p>
+	}
+}
+
+const setupSrc = `mkdir mysite && cd mysite
+go mod init example.com/mysite
+go get github.com/LukasDerBaum42/astwerk github.com/a-h/templ`
+
+const buildCmds = `templ generate
+go run .`

@@ -1,0 +1,57 @@
+package pages
+
+import (
+	"github.com/LukasDerBaum42/astwerk-website/templates"
+	"github.com/LukasDerBaum42/astwerk/ssg"
+)
+
+// ExampleTemplBasics is the one example that isn't about astwerk at all — it
+// covers authoring in templ itself, since every astwerk page is templ. These
+// run nowhere because they don't need to: each snippet is the whole feature.
+templ ExampleTemplBasics(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>Templ basics</h1>
+		<p class="lede">
+			Every astwerk page is a templ component, so the authoring model is
+			templ's. These are the shapes astwerk pages are built from — each one
+			is the entire feature. The full reference lives at
+			<a href="https://templ.guide">templ.guide</a>.
+		</p>
+
+		<h2 id="components">Components</h2>
+		<p>
+			A component is a function that renders markup. Parameters are plain Go
+			values, so a component is called like a function and typed by the
+			compiler.
+		</p>
+		@templates.CodeBlockTempl(templBasicsSrc)
+
+		<h2 id="composition">Composition and children</h2>
+		<p>
+			Components nest with <code>{ "@" }Component(...)</code>. A component that
+			accepts children declares them with <code>{ "{" } children... { "}" }</code>, and
+			the caller wraps it instead of passing content in as a parameter —
+			that is the shape <code>starter/layout/base_layout.templ</code> uses.
+		</p>
+		<h2 id="expressions">Expressions and escaping</h2>
+		<p>
+			<code>{ "{" } expr { "}" }</code> interpolates a value, HTML-escaped by default.
+			Escaping is per context — element text, attribute, URL and CSS each
+			get their own rules — so user data cannot inject markup, and trusted
+			HTML is the opt-in <code>templ.Raw</code>, never the default.
+		</p>
+		<h2 id="flow">Conditionals and loops</h2>
+		<p>
+			<code>{ "if" }</code> and <code>{ "for" }</code> are Go, written inline in the
+			markup. There is no template language to learn beyond what you already
+			know.
+		</p>
+		<h2 id="attributes">Attributes</h2>
+		<p>
+			Attributes take Go expressions: <code>disabled?={ "{" } cond { "}" }</code> emits
+			the attribute only when the condition holds, and helpers like
+			<code>templ.URL</code> and <code>templ.Class</code> apply the right
+			escaping for their context.
+		</p>
+	}
+}

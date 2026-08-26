@@ -11,11 +11,12 @@ templ Home(c ssg.Ctx) {
 			<h1>astwerk</h1>
 			<p class="tagline">
 				A minimal, no-magic static site generator for Go&nbsp;+&nbsp;templ.
-				No Node.js, no JS build tooling. Optional client-side scripting via Go&nbsp;&rarr;&nbsp;WASM.
+				No Node.js, no JS build tooling. Interactivity via compiled markup —
+				or Go&nbsp;&rarr;&nbsp;WASM when you need the whole language.
 			</p>
 			<pre class="install"><code>go get github.com/LukasDerBaum42/astwerk</code></pre>
 			<p class="cta">
-				<a class="button" href={ c.Link("docs/getting-started/") }>Get started</a>
+				<a class="button" href={ c.Link("tutorial/") }>Build a site</a>
 				<a class="button ghost" href={ c.Link("examples/") }>See it running</a>
 			</p>
 		</section>
@@ -51,9 +52,10 @@ templ Home(c ssg.Ctx) {
 				@card("The tree walker", "ssg", "One function replaces hand-written page loops and scattered os.MkdirAll calls. Pages get their own path and locale handed to them.", c.Link("docs/the-node-tree/"))
 				@card("Markdown content", "content", "TOML front matter decoded into your own struct. Point Generate at a directory and get one page per file.", c.Link("docs/content-and-collections/"))
 				@card("Derived locales", "BuildLocales", "A locale subtree is generated from the base tree. You list only the pages that genuinely differ.", c.Link("docs/i18n/"))
+				@card("Compiled markup", "x", "Markers generate both the HTML and the JavaScript for a page at build time — no WASM, no framework, and static without JavaScript.", c.Link("docs/x/"))
 				@card("Go in the browser", "wasmwrap", "syscall/js made to feel like Go: query, style, events, fetch and canvas, with chainable calls.", c.Link("docs/wasmwrap/"))
-				@card("Reactive UI", "reactive", "Signals with automatic dependency tracking, fine-grained DOM bindings, keyed lists and a router.", c.Link("docs/reactive/"))
-				@card("Starter templates", "starter", "Thirteen copyable .templ files — layouts, collections, SEO, RSS. Copied, never imported.", c.Link("docs/starter-templates/"))
+				@card("Reactive UI (WASM)", "reactive", "Signals with automatic dependency tracking, fine-grained DOM bindings, keyed lists and a router — the full-Go path.", c.Link("docs/reactive/"))
+				@card("Starter templates", "starter", "Seventeen copyable .templ files — layouts, collections, SEO, RSS, and the x widgets. Copied, never imported.", c.Link("docs/starter-templates/"))
 			</div>
 		</section>
 

@@ -1,0 +1,147 @@
+<lexer>
+  <config>
+    <name>templ</name>
+    <alias>templ</alias>
+    <filename>*.templ</filename>
+  </config>
+  <rules>
+    <state name="root">
+      <!-- Consume newlines one at a time, so line starts stay visible. -->
+      <rule pattern="\n">
+        <token type="TextWhitespace"/>
+      </rule>
+      <rule pattern="[ \t]+">
+        <token type="TextWhitespace"/>
+      </rule>
+      <rule pattern="//[^\n]*">
+        <token type="CommentSingle"/>
+      </rule>
+      <!-- Go at the top of the file: package, imports, declarations. -->
+      <rule pattern="((?:package|import|var|const|type|func)\b[^\n]*)">
+        <using lexer="Go"/>
+      </rule>
+      <!-- templ Name(params) { — the header is Go, the body is markup. -->
+      <rule pattern="(templ)\b([^{]*?)(\{)">
+        <bygroups>
+          <token type="KeywordDeclaration"/>
+          <using lexer="Go"/>
+          <token type="Punctuation"/>
+        </bygroups>
+        <push state="body"/>
+      </rule>
+      <rule pattern="[^{@\n]+">
+        <token type="Other"/>
+      </rule>
+      <rule pattern=".">
+        <token type="Other"/>
+      </rule>
+    </state>
+    <state name="body">
+      <rule pattern="\n">
+        <token type="TextWhitespace"/>
+      </rule>
+      <rule pattern="[ \t]+">
+        <token type="TextWhitespace"/>
+      </rule>
+      <!-- The closing brace of a component or a block. -->
+      <rule pattern="(\})">
+        <token type="Punctuation"/>
+        <pop depth="1"/>
+      </rule>
+      <!-- Script and style content is raw; the html lexer owns it. -->
+      <rule pattern="(?s)(&lt;script[\s&gt;].*?&lt;/script&gt;)">
+        <token type="Other"/>
+      </rule>
+      <rule pattern="(?s)(&lt;style[\s&gt;].*?&lt;/style&gt;)">
+        <token type="Other"/>
+      </rule>
+      <!-- { children... } -->
+      <rule pattern="\{\s*children\.\.\.\s*\}">
+        <token type="NameBuiltin"/>
+      </rule>
+      <!-- Go control flow: if/for/switch take a block, case/default don't. -->
+      <rule pattern="((?:if|else if|for|switch)\b[^\{\n]*)(\{)">
+        <bygroups>
+          <using lexer="Go"/>
+          <token type="Punctuation"/>
+        </bygroups>
+        <push state="body"/>
+      </rule>
+      <rule pattern="(else)\b([ \t]*)(\{)">
+        <bygroups>
+          <using lexer="Go"/>
+          <token type="TextWhitespace"/>
+          <token type="Punctuation"/>
+        </bygroups>
+        <push state="body"/>
+      </rule>
+      <rule pattern="((?:case)\b[^:\n]*:|default:)">
+        <using lexer="Go"/>
+      </rule>
+      <!-- @Component(args) — the name and call are Go. -->
+      <rule pattern="(@)([a-zA-Z_][\w.]*)(\s*)(\()">
+        <bygroups>
+          <token type="Operator"/>
+          <using lexer="Go"/>
+          <token type="TextWhitespace"/>
+          <token type="Punctuation"/>
+        </bygroups>
+        <push state="parens"/>
+      </rule>
+      <rule pattern="(@)([a-zA-Z_][\w.]*)">
+        <bygroups>
+          <token type="Operator"/>
+          <using lexer="Go"/>
+        </bygroups>
+      </rule>
+      <!-- A brace followed by a line break opens a children block. -->
+      <rule pattern="(\{[ \t]*)(\n)">
+        <bygroups>
+          <token type="Punctuation"/>
+          <token type="TextWhitespace"/>
+        </bygroups>
+        <push state="body"/>
+      </rule>
+      <!-- Anything else in braces is a Go expression. -->
+      <rule pattern="\{">
+        <token type="Punctuation"/>
+        <push state="expr"/>
+      </rule>
+      <rule pattern="[^{@\n]+">
+        <token type="Other"/>
+      </rule>
+      <rule pattern=".">
+        <token type="Other"/>
+      </rule>
+    </state>
+    <state name="expr">
+      <rule pattern="children\.\.\.">
+        <token type="NameBuiltin"/>
+      </rule>
+      <rule pattern="[^{}]+">
+        <using lexer="Go"/>
+      </rule>
+      <rule pattern="\{">
+        <token type="Punctuation"/>
+        <push state="expr"/>
+      </rule>
+      <rule pattern="\}">
+        <token type="Punctuation"/>
+        <pop depth="1"/>
+      </rule>
+    </state>
+    <state name="parens">
+      <rule pattern="\)">
+        <token type="Punctuation"/>
+        <pop depth="1"/>
+      </rule>
+      <rule pattern="\(">
+        <token type="Punctuation"/>
+        <push state="parens"/>
+      </rule>
+      <rule pattern="[^()]+">
+        <using lexer="Go"/>
+      </rule>
+    </state>
+  </rules>
+</lexer>

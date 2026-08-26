@@ -6,12 +6,23 @@ import (
 )
 
 // ExampleNav is the sidebar for every page under examples/, in reading order:
-// live demos first, then the code-only coverage of what can't run as one.
+// the compiled-markup demos first (the recommended path), then the WASM demos,
+// then the code-only coverage of what can't run as one.
 var ExampleNav = []templates.NavGroup{
 	{
-		Title: "Live demos",
+		Title: "Compiled markup (x)",
 		Items: []templates.NavItem{
 			{Label: "Overview", Path: "examples/"},
+			{Label: "Counter, no WASM", Path: "examples/x-counter/"},
+			{Label: "Forms & computed", Path: "examples/x-forms/"},
+			{Label: "Attribute bindings", Path: "examples/x-bindings/"},
+			{Label: "Keyed list", Path: "examples/x-todo/"},
+			{Label: "Under the hood", Path: "examples/x-under-the-hood/"},
+		},
+	},
+	{
+		Title: "WASM demos",
+		Items: []templates.NavItem{
 			{Label: "Counter", Path: "examples/counter/"},
 			{Label: "Keyed list", Path: "examples/list/"},
 			{Label: "Form bindings", Path: "examples/forms/"},
@@ -22,6 +33,7 @@ var ExampleNav = []templates.NavGroup{
 	{
 		Title: "In code",
 		Items: []templates.NavItem{
+			{Label: "Templ basics", Path: "examples/templ-basics/"},
 			{
 				Label: "Tree & content", Path: "examples/tree-and-content/",
 				Sub: []templates.SubItem{
@@ -75,22 +87,38 @@ templ ExampleOverview(c ssg.Ctx, prev, next *templates.NavItem) {
 	@examplePage(c, prev, next) {
 		<h1>Examples</h1>
 		<p class="lede">
-			Five pages run live in your browser right now — view source, the HTML
-			is all there before any script executes. Three more are code-only:
-			the parts of astwerk that build a site rather than run in one, shown
-			rather than hydrated.
+			Five pages run on compiled markup — the JavaScript was generated at
+			build time and is embedded right in the page; view source, no WASM is
+			loaded. Five more run the same features through WebAssembly, for when
+			you want full Go in the browser. Four are code-only: templ authoring,
+			and the parts of astwerk that build a site rather than run in one.
+			Starting from nothing instead? The
+			<a href={ c.Link("tutorial/") }>Build a site</a> tutorial goes
+			step by step from <code>go mod init</code> to a deployed site.
 		</p>
 		<dl class="doc-list">
-			<dt><a href={ c.Link("examples/counter/") }>Counter</a></dt>
-			<dd>A signal, a text binding, two handlers.</dd>
-			<dt><a href={ c.Link("examples/list/") }>Keyed list</a></dt>
+			<dt><a href={ c.Link("examples/x-counter/") }>Counter, no WASM</a></dt>
+			<dd><code>x.Text</code>, <code>x.On</code>, <code>x.When</code>, <code>x.Effect</code> — and the generated script, in the page.</dd>
+			<dt><a href={ c.Link("examples/x-forms/") }>Forms &amp; computed</a></dt>
+			<dd>Two-way <code>x.Number</code> inputs and a <code>x.Computed</code> total, compiled to JavaScript.</dd>
+			<dt><a href={ c.Link("examples/x-bindings/") }>Attribute bindings</a></dt>
+			<dd><code>x.Attr</code>, <code>x.Class</code>, <code>x.Disabled</code> and <code>x.Style</code>, each owning one property.</dd>
+			<dt><a href={ c.Link("examples/x-todo/") }>Keyed list</a></dt>
+			<dd><code>x.List</code> inserting and removing nodes without rebuilding rows; the script escape hatch for the handlers.</dd>
+			<dt><a href={ c.Link("examples/x-under-the-hood/") }>Under the hood</a></dt>
+			<dd>The exact HTML and script the build emitted for a widget, shown on the page itself.</dd>
+			<dt><a href={ c.Link("examples/counter/") }>Counter (WASM)</a></dt>
+			<dd>The same counter, implemented in Go compiled to WebAssembly.</dd>
+			<dt><a href={ c.Link("examples/list/") }>Keyed list (WASM)</a></dt>
 			<dd><code>BindList</code> moving nodes instead of rebuilding them.</dd>
-			<dt><a href={ c.Link("examples/forms/") }>Form bindings</a></dt>
+			<dt><a href={ c.Link("examples/forms/") }>Form bindings (WASM)</a></dt>
 			<dd>Two-way <code>BindValue</code>/<code>BindChecked</code>, plus a derived summary.</dd>
 			<dt><a href={ c.Link("examples/async/") }>Async data</a></dt>
 			<dd>A <code>Resource</code>'s loading, error and data states, all as signals.</dd>
 			<dt><a href={ c.Link("examples/canvas/") }>Canvas</a></dt>
 			<dd>A typed 2D context and an animation loop.</dd>
+			<dt><a href={ c.Link("examples/templ-basics/") }>Templ basics</a></dt>
+			<dd>Components, children, escaping, <code>if</code>/<code>for</code> — the authoring model every astwerk page is built from.</dd>
 			<dt><a href={ c.Link("examples/tree-and-content/") }>Tree &amp; content</a></dt>
 			<dd><code>ssg.Node</code>, <code>Build</code>, markdown collections and locales.</dd>
 			<dt><a href={ c.Link("examples/scripts-and-routing/") }>Scripts &amp; routing</a></dt>
@@ -106,7 +134,9 @@ templ ExampleCounter(c ssg.Ctx, prev, next *templates.NavItem) {
 		<h1>A counter</h1>
 		<p class="lede">
 			The smallest useful thing: a signal, a text binding, two handlers. The
-			markup is static; only the number changes.
+			markup is static; only the number changes. This is the WebAssembly
+			path — the same counter generated as plain JavaScript is
+			<a href={ c.Link("examples/x-counter/") }>Counter, no WASM</a>.
 		</p>
 		<div class="demo" id="counter">
 			<button data-dec aria-label="Decrement">&minus;</button>
@@ -155,7 +185,8 @@ templ ExampleList(c ssg.Ctx, prev, next *templates.NavItem) {
 		<p class="lede">
 			Add and remove rows. Entries are keyed, so existing nodes are moved
 			rather than rebuilt — type into a row, then add another and watch the
-			text you typed survive.
+			text you typed survive. The compiled-markup version of this is
+			<a href={ c.Link("examples/x-todo/") }>Keyed list</a>.
 		</p>
 		<div class="demo" id="todo">
 			<form data-form>
@@ -200,7 +231,8 @@ templ ExampleForms(c ssg.Ctx, prev, next *templates.NavItem) {
 			<code>BindValue</code> and <code>BindChecked</code> keep a field and a
 			signal in sync both ways. The summary line and the panel below it are
 			both derived from the same two signals — nothing here talks to the DOM
-			directly except the bindings.
+			directly except the bindings. The compiled-markup version is
+			<a href={ c.Link("examples/x-forms/") }>Forms &amp; computed</a>.
 		</p>
 		<div class="demo" id="form-demo">
 			<p>

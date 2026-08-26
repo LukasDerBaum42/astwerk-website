@@ -1,0 +1,306 @@
+package pages
+
+import (
+	"github.com/LukasDerBaum42/astwerk-website/templates"
+	x "github.com/LukasDerBaum42/astwerk/x"
+	"github.com/LukasDerBaum42/astwerk/ssg"
+)
+
+// State for the compiled-markup demos. Each demo page is its own HTML file,
+// and every page's own Document names its signals independently, so these
+// package-level values are shared safely: the build only ever reads them.
+var (
+	XCount = x.Named("count", 0)
+	XOpen  = x.NewSignal(false)
+
+	XPrice = x.NewSignal(10.0)
+	XQty   = x.NewSignal(2.0)
+	XTotal = x.Computed(XPrice.Mul(XQty))
+	XTax   = x.NewSignal(false)
+
+	XTodos = x.Named("todos", []XTodo{
+		{ID: "1", Text: "Read the docs"},
+		{ID: "2", Text: "Build something"},
+	})
+	XDraft = x.Named("draft", "")
+
+	BURL    = x.NewSignal("https://templ.guide")
+	BActive = x.NewSignal(true)
+	BBusy   = x.NewSignal(false)
+	BColour = x.NewSignal("#4f7cff")
+
+	HoodCount = x.Named("hood", 0)
+)
+
+// XTodo is one keyed-list row. The json tags are the field names the browser
+// half of the list reads, so they are part of the contract with todoRow below.
+type XTodo struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+}
+
+templ ExampleXCounter(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>A counter, without WASM</h1>
+		<p class="lede">
+			The same counter as the WASM demo, but the JavaScript was generated at
+			build time by the markers themselves. No <code>.wasm</code>, no runtime
+			to download — view source: the bindings are right there in this page's
+			HTML.
+		</p>
+		@x.Document(xCounterDemo())
+		@templates.CodeBlockTempl(xCounterSrc)
+		<h2>How it works</h2>
+		<ul>
+			<li><code>x.Named("count", 0)</code> creates the state. The name is
+				what lets the effect script below read it as <code>count.get()</code>.</li>
+			<li><code>{ "@" }x.Text(XCount)</code> renders the current value into a
+				<span> and emits the JavaScript that keeps it in sync — in the same
+				call. The marker owns its element, so there is no selector to keep in
+				sync by hand.</span></li>
+			<li><code>x.On("click", …)</code> is a binding on the button; the action
+				is built from combinators — <code>count.Set(count.Add(1))</code>
+				increments, <code>count.Set(x.Lit(0))</code> resets.</li>
+			<li><code>x.Not</code> negates, so the toggle button flips
+				<code>XOpen</code>; <code>x.When</code> mounts and unmounts the secret
+				paragraph as it changes.</li>
+			<li><code>x.Effect</code> runs the script on load and again whenever
+				<code>count</code> changes. The script is written in templ, so its
+				content is raw — no escaping, no quoting.</li>
+			<li><code>x.Document</code> is what emits the runtime and state
+				declarations before this markup and the bindings after it. Outside a
+				Document the markers render plain static HTML, which is why the page
+				still reads fine with JavaScript disabled.</li>
+		</ul>
+		<p>
+			The full marker set is documented in
+			<a href={ c.Link("docs/x/") }>x — compiled reactive markup</a>.
+		</p>
+	}
+}
+
+templ ExampleXForms(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>Forms and computed values</h1>
+		<p class="lede">
+			Two number inputs bound two-way, a total derived from them, and a
+			checkbox driving visibility. The total is a <code>x.Computed</code> —
+			recomputed in the browser whenever either input changes.
+		</p>
+		@x.Document(xFormsDemo())
+		@templates.CodeBlockTempl(xFormsSrc)
+		<h2>How it works</h2>
+		<ul>
+			<li><code>x.Number</code> is two-way: typing writes the signal, and the
+				signal being set writes back into the field. Input that isn't a
+				number is ignored rather than clobbering the signal.</li>
+			<li><code>x.Computed(XPrice.Mul(XQty))</code> derives the total. The
+				expression is evaluated at build time to render the static
+				<code>20</code>, and compiled to JavaScript that recomputes it when
+				either dependency changes.</li>
+			<li><code>x.Checkbox</code> two-way binds a bool; <code>x.Show</code>
+				lets that same bool drive an element's visibility.</li>
+		</ul>
+	}
+}
+
+templ ExampleXTodo(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>A keyed list</h1>
+		<p class="lede">
+			The two rows were rendered at build time; the rest is a keyed list —
+			adding a row inserts one node, never rebuilds the others. The add and
+			remove handlers are a script, which is the escape hatch: anything a
+			combinator can't say is plain JavaScript reading the named signals.
+		</p>
+		@x.Document(xTodoDemo())
+		@templates.CodeBlock(xTodoSrc)
+		<h2>How it works</h2>
+		<ul>
+			<li><code>x.Input</code> two-way binds the new-item field to
+				<code>draft</code>; the handler script reads it as
+				<code>draft.get()</code> and clears it with <code>draft.set("")</code>,
+				which the binding echoes back into the field.</li>
+			<li><code>x.List</code> takes the signal, the JSON field that keys each
+				item, a Go renderer for rows present at build time, and the name of a
+				JavaScript function that renders rows added in the browser —
+				<code>todoRow</code>, defined in the same page's script.</li>
+			<li>Rows are keyed by <code>id</code>: adding or removing an item moves
+				or detaches one node; every other row's element is untouched.</li>
+			<li>Remove uses event delegation on the list wrapper, so one listener
+				covers rows rendered by the Go side and rows rendered by
+				<code>todoRow</code> alike.</li>
+		</ul>
+	}
+}
+
+templ xCounterDemo() {
+	<div class="demo">
+		<div class="counter-row">
+			@x.El("button", x.On("click", XCount.Set(XCount.Add(1)))) {
+				@x.Text(XCount) +
+			}
+			@x.El("button", x.On("click", XCount.Set(x.Lit(0)))) {
+				reset
+			}
+		</div>
+		<p>
+			@x.El("button", x.On("click", XOpen.Set(x.Not(XOpen)))) {
+				toggle secret
+			}
+			@x.When(XOpen, xSecret())
+		</p>
+		<p class="demo-note" data-x-note></p>
+		@x.Effect() {
+			<script>
+				document.querySelector("[data-x-note]").textContent = "Count: " + count.get();
+			</script>
+		}
+	</div>
+}
+
+templ xSecret() {
+	<span>the conditional subtree</span>
+}
+
+templ xFormsDemo() {
+	<div class="demo">
+		<p><label>Price</label> @x.Number(XPrice)</p>
+		<p><label>Quantity</label> @x.Number(XQty)</p>
+		<p class="demo-note"><span>Total: </span>@x.Text(XTotal)</p>
+		<p>@x.Checkbox(XTax) <label>include tax</label></p>
+		@x.El("p", x.Show(XTax)) {
+			A checked box can drive visibility, too.
+		}
+	</div>
+}
+
+templ xTodoDemo() {
+	<div class="demo">
+		<form class="todo-form" data-x-form>
+			@x.Input(XDraft)
+			<button type="submit">Add</button>
+		</form>
+		<div data-x-list>
+			@x.List(XTodos, "id", xTodoRow, "todoRow")
+		</div>
+		@xTodoScript()
+	</div>
+}
+
+templ ExampleXBindings(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>Attribute bindings</h1>
+		<p class="lede">
+			Everything a value can do to an element: <code>x.Attr</code>,
+			<code>x.Class</code>, <code>x.Disabled</code> and <code>x.Style</code>.
+			Each one owns its property — use the buttons to change the signals and
+			watch each element update on its own, nothing else re-renders.
+		</p>
+		@x.Document(xBindingsDemo())
+		@templates.CodeBlockTempl(xBindingsSrc)
+		<h2>How it works</h2>
+		<ul>
+			<li><code>x.Attr</code> sets a string attribute; an empty value
+				removes it, which is what string-driven boolean attributes need.</li>
+			<li><code>x.Class</code> toggles one class; <code>x.Disabled</code>
+				toggles the boolean attribute through <code>toggleAttribute</code>,
+				so "disabled" is present or absent rather than true or false.</li>
+			<li><code>x.Style</code> sets one CSS property through
+				<code>style.setProperty</code>, so a value cannot break out of its
+				property into the rest of the stylesheet.</li>
+			<li>All of them render their current value into the static HTML and
+				subscribe to the signal — the subscriber is resolved at build time,
+				along with everything else on this page.</li>
+		</ul>
+	}
+}
+
+templ ExampleXUnderTheHood(c ssg.Ctx, prev, next *templates.NavItem) {
+	@examplePage(c, prev, next) {
+		<h1>What the markers generate</h1>
+		<p class="lede">
+			The widget below was rendered at build time, and so was everything
+			around it: the blocks beneath it are the exact HTML and script the
+			build emitted for it, with only the runtime elided. View source to see
+			the whole page, runtime included.
+		</p>
+		@x.Document(hoodDemo())
+		@templates.CodeBlockTempl(hoodSrc)
+		<h2>The generated HTML</h2>
+		<p>
+			Each marker stamps its own element with <code>data-x</code> and
+			renders the current value — this is the page's markup, static before
+			any script runs.
+		</p>
+		@templates.CodeBlock(hoodHTML())
+		<h2>The generated script</h2>
+		<p>
+			The runtime (omitted here) declares the signal, and the footer binds
+			it to the stamped nodes. There is nothing to diff and nothing to
+			re-render: a click runs <code>hood.set(hood.get() + 1)</code> and the
+			text binding writes the new value.
+		</p>
+		@templates.CodeBlockJS(hoodJS())
+	}
+}
+
+templ xBindingsDemo() {
+	<div class="demo">
+		<p>@x.El("a", x.Attr("href", BURL)) { templ.guide }</p>
+		<p>@x.El("span", x.Class("on", BActive)) { a toggled class }</p>
+		<p>@x.El("button", x.Disabled(BBusy)) { save }</p>
+		<p>@x.El("span", x.Style("color", BColour)) { styled text }</p>
+		<div class="counter-row">
+			@x.El("button", x.On("click", BActive.Set(x.Not(BActive)))) {
+				toggle class
+			}
+			@x.El("button", x.On("click", BBusy.Set(x.Not(BBusy)))) {
+				toggle disabled
+			}
+			@x.El("button", x.On("click", BColour.Set(x.Lit("#ff4f7c")))) {
+				recolour
+			}
+			@x.El("button", x.On("click", BURL.Set(x.Lit("https://pkg.go.dev/github.com/LukasDerBaum42/astwerk")))) {
+				retarget link
+			}
+		</div>
+	</div>
+}
+
+templ hoodDemo() {
+	<div class="demo">
+		@x.El("button", x.On("click", HoodCount.Set(HoodCount.Add(1)))) {
+			@x.Text(HoodCount) +
+		}
+	</div>
+}
+
+// xTodoRow renders a row present at build time — the static half of the list.
+templ xTodoRow(item XTodo) {
+	<li>{ item.Text } <button data-remove={ item.ID }>remove</button></li>
+}
+
+// xTodoScript is the client-side half: the row template for items added in the
+// browser, and the add/remove handlers. Anything a combinator cannot say is a
+// script — and scripts read the named signals directly.
+templ xTodoScript() {
+	<script>
+		const esc = (s) => String(s).replace(/[&<>"]/g, (c) => "&#" + c.charCodeAt(0) + ";");
+		function todoRow(item) {
+			return `<li>${esc(item.text)} <button data-remove="${item.id}">remove</button></li>`;
+		}
+		document.querySelector("[data-x-form]").addEventListener("submit", (e) => {
+			e.preventDefault();
+			const text = draft.get();
+			if (!text) return;
+			todos.set([...todos.get(), { id: String(Date.now()), text }]);
+			draft.set("");
+		});
+		document.querySelector("[data-x-list]").addEventListener("click", (e) => {
+			const btn = e.target.closest("[data-remove]");
+			if (!btn) return;
+			todos.set(todos.get().filter((t) => t.id !== btn.dataset.remove));
+		});
+	</script>
+}

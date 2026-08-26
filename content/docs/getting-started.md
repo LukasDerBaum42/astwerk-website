@@ -9,6 +9,9 @@ astwerk generates a static site from a Go program. You write a tree describing
 the output directory; it walks the tree and writes files. Templates are
 [templ](https://templ.guide) components — real Go, type-checked at compile time.
 
+Prefer to build something? The [Build a site](../../tutorial/) tutorial walks through
+a complete site — collection, locale, interactivity and all — step by step.
+
 ## Install
 
 ```

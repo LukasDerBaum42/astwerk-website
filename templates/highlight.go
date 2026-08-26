@@ -25,10 +25,28 @@ const StyleName = "github"
 // chroma can't lex should still be readable, and a docs page shouldn't fail to
 // build over syntax colouring.
 func HighlightGo(src string) string {
+	return Highlight(src, "go")
+}
+
+// HighlightJS renders JavaScript source as highlighted HTML, with the same
+// fallback behaviour as HighlightGo.
+func HighlightJS(src string) string {
+	return Highlight(src, "js")
+}
+
+// HighlightTempl renders templ source as highlighted HTML: markup through the
+// HTML lexer, Go through the Go lexer.
+func HighlightTempl(src string) string {
+	return Highlight(src, "templ")
+}
+
+// Highlight renders source with the named chroma lexer, falling back to
+// escaped plain text when the lexer is missing or fails.
+func Highlight(src, name string) string {
 	src = strings.TrimSpace(src)
 	fallback := "<pre class=\"chroma\"><code>" + html.EscapeString(src) + "</code></pre>"
 
-	lexer := lexers.Get("go")
+	lexer := lexers.Get(name)
 	style := styles.Get(StyleName)
 	if lexer == nil || style == nil {
 		return fallback

@@ -135,12 +135,30 @@ func TestExpectedPagesExist(t *testing.T) {
 		"docs/index.html",
 		"docs/getting-started/index.html",
 		"docs/the-node-tree/index.html",
+		"docs/x/index.html",
+		"tutorial/index.html",
+		"tutorial/1-setup/index.html",
+		"tutorial/2-the-tree/index.html",
+		"tutorial/3-a-layout/index.html",
+		"tutorial/4-more-pages/index.html",
+		"tutorial/5-a-collection/index.html",
+		"tutorial/6-styles/index.html",
+		"tutorial/7-a-locale/index.html",
+		"tutorial/8-interactivity/index.html",
+		"tutorial/9-the-dev-loop/index.html",
+		"tutorial/10-ship-it/index.html",
 		"examples/index.html",
+		"examples/x-counter/index.html",
+		"examples/x-forms/index.html",
+		"examples/x-bindings/index.html",
+		"examples/x-todo/index.html",
+		"examples/x-under-the-hood/index.html",
 		"examples/counter/index.html",
 		"examples/list/index.html",
 		"examples/forms/index.html",
 		"examples/async/index.html",
 		"examples/canvas/index.html",
+		"examples/templ-basics/index.html",
 		"examples/tree-and-content/index.html",
 		"examples/scripts-and-routing/index.html",
 		"examples/wasmwrap-and-templ/index.html",
@@ -152,6 +170,43 @@ func TestExpectedPagesExist(t *testing.T) {
 	} {
 		if _, err := os.Stat(filepath.Join(out, want)); err != nil {
 			t.Errorf("missing %s", want)
+		}
+	}
+}
+
+// The compiled-markup example pages are self-contained: their JavaScript is
+// generated at build time and embedded in the page, and they must not load the
+// WASM demo module. Each must carry the runtime (aw), at least one stamped
+// node, and at least one binding — that is the contract that makes them work
+// with JavaScript on and read fine with it off.
+func TestXExamplesAreSelfContained(t *testing.T) {
+	out := buildOnce(t)
+
+	for _, page := range []string{
+		"examples/x-counter/index.html",
+		"examples/x-forms/index.html",
+		"examples/x-bindings/index.html",
+		"examples/x-todo/index.html",
+		"examples/x-under-the-hood/index.html",
+		"tutorial/8-interactivity/index.html",
+	} {
+		body, err := os.ReadFile(filepath.Join(out, page))
+		if err != nil {
+			t.Fatal(err)
+		}
+		html := string(body)
+
+		for _, want := range []string{
+			"globalThis.aw =", // the generated runtime
+			`data-x="0"`,      // the first stamped node
+			"aw.",             // at least one binding
+		} {
+			if !strings.Contains(html, want) {
+				t.Errorf("%s is missing %q — the compiled markup did not generate", page, want)
+			}
+		}
+		if strings.Contains(html, "wasm_exec.js") || strings.Contains(html, "data-wasm=") {
+			t.Errorf("%s loads the WASM module; it should be self-contained", page)
 		}
 	}
 }

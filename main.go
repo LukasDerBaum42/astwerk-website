@@ -19,7 +19,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -76,27 +78,64 @@ func main() {
 	log.Printf("built %d pages into %s/ (relative URLs, canonical base %q)", n, *out, *base)
 }
 
-// runServer builds the site on every change and reloads the browser. The build
-// always runs in dev mode: overwriting in place keeps a page's assets readable
-// while the rebuild is halfway through.
+// runServer builds the site on every change and reloads the browser.
 //
-// buildSite re-reads content/docs on every call, so an edit to a markdown file
-// is picked up with no extra plumbing.
+// The rebuild runs out of process — templ generate, then this same program
+// again without --serve. That is not indirection for its own sake: every page
+// here is a compiled templ component, and a running Go program cannot load new
+// code. Rebuilding in-process would re-render the components baked into the
+// binary that started the server, so editing a .templ would reload the browser
+// and change nothing.
+//
+// The inner build runs in dev mode: overwriting in place keeps a page's assets
+// readable while the rebuild is halfway through.
 func runServer(outDir, base, addr string) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
+	templ, templArgs := templCommand()
+
 	err := devserver.Run(ctx, devserver.Config{
 		Dir:  outDir,
 		Addr: addr,
-		Build: func() error {
-			_, err := buildSite(outDir, base, true)
-			return err
-		},
+		Build: devserver.Steps(
+			devserver.Command(templ, templArgs...),
+			devserver.Command("go", "run", ".", "--out", outDir, "--base", base, "--dev"),
+		),
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// TemplVersion is the templ release this site generates with. Keep it in step
+// with the version the CI workflows pin.
+const TemplVersion = "v0.3.1020"
+
+// templCommand is how to run templ generate, preferring an installed binary.
+//
+// `go run github.com/a-h/templ/cmd/templ@version` always works and needs
+// nothing installed, but it costs about three and a half seconds even warm —
+// too slow to sit in a save-and-look loop. The installed binary does the same
+// job in about two tenths of a second, so it is worth looking for, with the
+// go run form kept as the fallback that cannot fail to exist.
+func templCommand() (name string, args []string) {
+	candidates := []string{"templ"}
+	if gobin := os.Getenv("GOBIN"); gobin != "" {
+		candidates = append(candidates, filepath.Join(gobin, "templ"))
+	}
+	if out, err := exec.Command("go", "env", "GOPATH").Output(); err == nil {
+		if gopath := strings.TrimSpace(string(out)); gopath != "" {
+			candidates = append(candidates, filepath.Join(gopath, "bin", "templ"))
+		}
+	}
+
+	for _, c := range candidates {
+		if path, err := exec.LookPath(c); err == nil {
+			return path, []string{"generate"}
+		}
+	}
+	return "go", []string{"run", "github.com/a-h/templ/cmd/templ@" + TemplVersion, "generate"}
 }
 
 // buildSite generates the site and returns how many pages it wrote. Separated
@@ -133,6 +172,7 @@ func buildSite(outDir, base string, dev bool) (int, error) {
 				},
 				Generate: func() map[string]ssg.Node { return docNodes(docs, sidebar, pager) },
 			},
+			"tutorial": tutorialRoot(),
 			"examples": exampleRoot(),
 			"style":    {CopyFrom: "style"},
 			"public":   {CopyFrom: "public"},
@@ -151,28 +191,61 @@ func buildSite(outDir, base string, dev bool) (int, error) {
 	}); err != nil {
 		return 0, err
 	}
-	return len(docs) + len(flattenNav(pages.ExampleNav)) + 4, nil
+	return len(docs) + len(flattenNav(pages.ExampleNav)) + len(flattenNav(pages.TutorialNav)) + 4, nil
 }
 
 // exampleRoot builds the examples/ subtree: one page per entry in
 // pages.ExampleNav, in the same order, with prev/next wired from that order —
-// the same pattern docNodes uses for the docs sidebar.
+// the same pattern navRoot uses for the tutorial and docNodes for the docs.
 func exampleRoot() ssg.Node {
-	items := flattenNav(pages.ExampleNav)
 	renderers := []func(ssg.Ctx, *templates.NavItem, *templates.NavItem) templ.Component{
 		pages.ExampleOverview,
+		pages.ExampleXCounter,
+		pages.ExampleXForms,
+		pages.ExampleXBindings,
+		pages.ExampleXTodo,
+		pages.ExampleXUnderTheHood,
 		pages.ExampleCounter,
 		pages.ExampleList,
 		pages.ExampleForms,
 		pages.ExampleAsync,
 		pages.ExampleCanvas,
+		pages.ExampleTemplBasics,
 		pages.ExampleTreeAndContent,
 		pages.ExampleScriptsAndRouting,
 		pages.ExampleWasmwrapAndTempl,
 	}
+	return navRoot("examples", pages.ExampleNav, renderers)
+}
+
+// tutorialRoot builds the tutorial/ subtree: an overview and ten steps, with
+// prev/next wired from the step order.
+func tutorialRoot() ssg.Node {
+	renderers := []func(ssg.Ctx, *templates.NavItem, *templates.NavItem) templ.Component{
+		pages.TutorialOverview,
+		pages.TutorialSetup,
+		pages.TutorialTree,
+		pages.TutorialLayout,
+		pages.TutorialMorePages,
+		pages.TutorialCollection,
+		pages.TutorialStyles,
+		pages.TutorialLocale,
+		pages.TutorialInteractivity,
+		pages.TutorialDevloop,
+		pages.TutorialShipIt,
+	}
+	return navRoot("tutorial", pages.TutorialNav, renderers)
+}
+
+// navRoot builds a paged subtree from a sidebar: one page per entry after the
+// first (which is the section's own index), with prev/next wired from the
+// sidebar's order. The slug of each child page is the last path segment of its
+// entry.
+func navRoot(section string, nav []templates.NavGroup, renderers []func(ssg.Ctx, *templates.NavItem, *templates.NavItem) templ.Component) ssg.Node {
+	items := flattenNav(nav)
 	if len(items) != len(renderers) {
-		log.Fatalf("examples: %d nav entries but %d renderers — ExampleNav and exampleRoot are out of sync",
-			len(items), len(renderers))
+		log.Fatalf("%s: %d nav entries but %d renderers — nav and renderers are out of sync",
+			section, len(items), len(renderers))
 	}
 
 	children := make(map[string]ssg.Node, len(items)-1)
@@ -184,8 +257,8 @@ func exampleRoot() ssg.Node {
 			next = &items[i+1]
 		}
 
-		slug := strings.TrimSuffix(strings.TrimPrefix(items[i].Path, "examples/"), "/")
-		children[slug] = ssg.Node{
+		parts := strings.Split(strings.Trim(items[i].Path, "/"), "/")
+		children[parts[len(parts)-1]] = ssg.Node{
 			Title: items[i].Label,
 			Page:  func(c ssg.Ctx) templ.Component { return render(c, prev, next) },
 		}
@@ -198,7 +271,7 @@ func exampleRoot() ssg.Node {
 	overview := renderers[0]
 
 	return ssg.Node{
-		Title:    "Examples",
+		Title:    section,
 		Page:     func(c ssg.Ctx) templ.Component { return overview(c, nil, overviewNext) },
 		Children: children,
 	}

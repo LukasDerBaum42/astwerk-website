@@ -14,12 +14,23 @@ import (
 )
 
 // ExampleNav is the sidebar for every page under examples/, in reading order:
-// live demos first, then the code-only coverage of what can't run as one.
+// the compiled-markup demos first (the recommended path), then the WASM demos,
+// then the code-only coverage of what can't run as one.
 var ExampleNav = []templates.NavGroup{
 	{
-		Title: "Live demos",
+		Title: "Compiled markup (x)",
 		Items: []templates.NavItem{
 			{Label: "Overview", Path: "examples/"},
+			{Label: "Counter, no WASM", Path: "examples/x-counter/"},
+			{Label: "Forms & computed", Path: "examples/x-forms/"},
+			{Label: "Attribute bindings", Path: "examples/x-bindings/"},
+			{Label: "Keyed list", Path: "examples/x-todo/"},
+			{Label: "Under the hood", Path: "examples/x-under-the-hood/"},
+		},
+	},
+	{
+		Title: "WASM demos",
+		Items: []templates.NavItem{
 			{Label: "Counter", Path: "examples/counter/"},
 			{Label: "Keyed list", Path: "examples/list/"},
 			{Label: "Form bindings", Path: "examples/forms/"},
@@ -30,6 +41,7 @@ var ExampleNav = []templates.NavGroup{
 	{
 		Title: "In code",
 		Items: []templates.NavItem{
+			{Label: "Templ basics", Path: "examples/templ-basics/"},
 			{
 				Label: "Tree & content", Path: "examples/tree-and-content/",
 				Sub: []templates.SubItem{
@@ -112,7 +124,7 @@ func examplePage(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 				var templ_7745c5c3_Var3 templ.SafeURL
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(prev.Path))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 61, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 73, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -125,7 +137,7 @@ func examplePage(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(prev.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 62, Col: 38}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 74, Col: 38}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -144,7 +156,7 @@ func examplePage(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 				var templ_7745c5c3_Var5 templ.SafeURL
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(next.Path))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 66, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 78, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -157,7 +169,7 @@ func examplePage(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(next.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 67, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 79, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -215,111 +227,202 @@ func ExampleOverview(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<h1>Examples</h1><p class=\"lede\">Five pages run live in your browser right now — view source, the HTML is all there before any script executes. Three more are code-only: the parts of astwerk that build a site rather than run in one, shown rather than hydrated.</p><dl class=\"doc-list\"><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<h1>Examples</h1><p class=\"lede\">Five pages run on compiled markup — the JavaScript was generated at build time and is embedded right in the page; view source, no WASM is loaded. Five more run the same features through WebAssembly, for when you want full Go in the browser. Four are code-only: templ authoring, and the parts of astwerk that build a site rather than run in one. Starting from nothing instead? The <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 templ.SafeURL
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/counter/"))
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("tutorial/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 84, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 96, Col: 32}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\">Counter</a></dt><dd>A signal, a text binding, two handlers.</dd><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\">Build a site</a> tutorial goes step by step from <code>go mod init</code> to a deployed site.</p><dl class=\"doc-list\"><dt><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var10 templ.SafeURL
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/list/"))
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-counter/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 86, Col: 41}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 100, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">Keyed list</a></dt><dd><code>BindList</code> moving nodes instead of rebuilding them.</dd><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">Counter, no WASM</a></dt><dd><code>x.Text</code>, <code>x.On</code>, <code>x.When</code>, <code>x.Effect</code> — and the generated script, in the page.</dd><dt><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var11 templ.SafeURL
-			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/forms/"))
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-forms/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 88, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 102, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\">Form bindings</a></dt><dd>Two-way <code>BindValue</code>/<code>BindChecked</code>, plus a derived summary.</dd><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\">Forms &amp; computed</a></dt><dd>Two-way <code>x.Number</code> inputs and a <code>x.Computed</code> total, compiled to JavaScript.</dd><dt><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var12 templ.SafeURL
-			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/async/"))
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-bindings/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 90, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 104, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">Async data</a></dt><dd>A <code>Resource</code>'s loading, error and data states, all as signals.</dd><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">Attribute bindings</a></dt><dd><code>x.Attr</code>, <code>x.Class</code>, <code>x.Disabled</code> and <code>x.Style</code>, each owning one property.</dd><dt><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var13 templ.SafeURL
-			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/canvas/"))
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-todo/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 92, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 106, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\">Canvas</a></dt><dd>A typed 2D context and an animation loop.</dd><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\">Keyed list</a></dt><dd><code>x.List</code> inserting and removing nodes without rebuilding rows; the script escape hatch for the handlers.</dd><dt><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var14 templ.SafeURL
-			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/tree-and-content/"))
+			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-under-the-hood/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 94, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 108, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\">Tree &amp; content</a></dt><dd><code>ssg.Node</code>, <code>Build</code>, markdown collections and locales.</dd><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\">Under the hood</a></dt><dd>The exact HTML and script the build emitted for a widget, shown on the page itself.</dd><dt><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var15 templ.SafeURL
-			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/scripts-and-routing/"))
+			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/counter/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 96, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 110, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\">Scripts &amp; routing</a></dt><dd><code>CompileFrom</code> and <code>reactive.Router</code> — why the router isn't live here.</dd><dt><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\">Counter (WASM)</a></dt><dd>The same counter, implemented in Go compiled to WebAssembly.</dd><dt><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var16 templ.SafeURL
-			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/wasmwrap-and-templ/"))
+			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/list/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 98, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 112, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\">wasmwrap &amp; templ</a></dt><dd>Raw DOM scripting without <code>reactive</code>, and re-rendering templ client-side.</dd></dl>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\">Keyed list (WASM)</a></dt><dd><code>BindList</code> moving nodes instead of rebuilding them.</dd><dt><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var17 templ.SafeURL
+			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/forms/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 114, Col: 42}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\">Form bindings (WASM)</a></dt><dd>Two-way <code>BindValue</code>/<code>BindChecked</code>, plus a derived summary.</dd><dt><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var18 templ.SafeURL
+			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/async/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 116, Col: 42}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\">Async data</a></dt><dd>A <code>Resource</code>'s loading, error and data states, all as signals.</dd><dt><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var19 templ.SafeURL
+			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/canvas/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 118, Col: 43}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\">Canvas</a></dt><dd>A typed 2D context and an animation loop.</dd><dt><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var20 templ.SafeURL
+			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/templ-basics/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 120, Col: 49}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\">Templ basics</a></dt><dd>Components, children, escaping, <code>if</code>/<code>for</code> — the authoring model every astwerk page is built from.</dd><dt><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var21 templ.SafeURL
+			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/tree-and-content/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 122, Col: 53}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\">Tree &amp; content</a></dt><dd><code>ssg.Node</code>, <code>Build</code>, markdown collections and locales.</dd><dt><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var22 templ.SafeURL
+			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/scripts-and-routing/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 124, Col: 56}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\">Scripts &amp; routing</a></dt><dd><code>CompileFrom</code> and <code>reactive.Router</code> — why the router isn't live here.</dd><dt><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var23 templ.SafeURL
+			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/wasmwrap-and-templ/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 126, Col: 55}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\">wasmwrap &amp; templ</a></dt><dd>Raw DOM scripting without <code>reactive</code>, and re-rendering templ client-side.</dd></dl>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -334,196 +437,6 @@ func ExampleOverview(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 }
 
 func ExampleCounter(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
-	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
-			return templ_7745c5c3_CtxErr
-		}
-		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-		if !templ_7745c5c3_IsBuffer {
-			defer func() {
-				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err == nil {
-					templ_7745c5c3_Err = templ_7745c5c3_BufErr
-				}
-			}()
-		}
-		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var17 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var17 == nil {
-			templ_7745c5c3_Var17 = templ.NopComponent
-		}
-		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var18 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-			if !templ_7745c5c3_IsBuffer {
-				defer func() {
-					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-					if templ_7745c5c3_Err == nil {
-						templ_7745c5c3_Err = templ_7745c5c3_BufErr
-					}
-				}()
-			}
-			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<h1>A counter</h1><p class=\"lede\">The smallest useful thing: a signal, a text binding, two handlers. The markup is static; only the number changes.</p><div class=\"demo\" id=\"counter\"><button data-dec aria-label=\"Decrement\">&minus;</button> <output data-count>0</output> <button data-inc aria-label=\"Increment\">+</button><p class=\"demo-note\">Parity: <strong data-parity>even</strong></p></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templates.CodeBlock(counterSrc).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, " <h2>How it works</h2><ul><li><code>reactive.NewSignal(0)</code> creates the piece of state. Nothing subscribes to it yet — a signal on its own is just a boxed value with a <code>Get</code>/<code>Set</code>/<code>Update</code>.</li><li><code>reactive.Computed</code> derives <code>parity</code> from <code>count</code>. Calling <code>count.Get()</code> inside it is what creates the dependency — <code>Computed</code> doesn't need to be told what it depends on.</li><li><code>reactive.Hydrate(\"#counter\", ...)</code> finds the markup this page already rendered and runs the callback with it, instead of building any DOM from scratch.</li><li><code>root.Find(\"[data-count]\")</code> resolves a selector relative to the hydrated root, not the whole document — so this script can't accidentally touch another demo's markup on the same page.</li><li><code>reactive.BindText(el, fn)</code> re-runs <code>fn</code> and writes its result into <code>el</code>'s text every time something <code>fn</code> reads changes. That's the whole binding — no diffing, no virtual node.</li><li><code>reactive.On(el, \"click\", fn)</code> is <code>el.On</code> plus automatic cleanup; it exists so a handler bound inside a re-rendered view doesn't leak when a plain <code>wasmwrap</code> script wouldn't have that concern in the first place.</li><li><code>count.Update</code> reads and writes atomically — reaching for <code>Get</code> then <code>Set</code> separately would still work here since nothing else writes concurrently, but <code>Update</code> is the form that stays correct if that ever changes.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			return nil
-		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var18), templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templates.WasmScript(c, "demo").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		return nil
-	})
-}
-
-func ExampleList(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
-	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
-			return templ_7745c5c3_CtxErr
-		}
-		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-		if !templ_7745c5c3_IsBuffer {
-			defer func() {
-				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err == nil {
-					templ_7745c5c3_Err = templ_7745c5c3_BufErr
-				}
-			}()
-		}
-		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var19 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var19 == nil {
-			templ_7745c5c3_Var19 = templ.NopComponent
-		}
-		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var20 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-			if !templ_7745c5c3_IsBuffer {
-				defer func() {
-					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-					if templ_7745c5c3_Err == nil {
-						templ_7745c5c3_Err = templ_7745c5c3_BufErr
-					}
-				}()
-			}
-			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<h1>A keyed list</h1><p class=\"lede\">Add and remove rows. Entries are keyed, so existing nodes are moved rather than rebuilt — type into a row, then add another and watch the text you typed survive.</p><div class=\"demo\" id=\"todo\"><form data-form><input data-new type=\"text\" placeholder=\"Something to do\" aria-label=\"New item\"> <button type=\"submit\" data-add>Add</button></form><ul data-list class=\"todo-list\"></ul><p class=\"demo-note\"><strong data-remaining>0</strong> remaining</p></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templates.CodeBlock(listSrc).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, " <h2>How it works</h2><ul><li><code>reactive.BindList(list, items.Get, keyFn, renderFn)</code> takes four things: the parent element, a function that returns the current slice, a function that extracts each item's key, and a function that renders one item into an element.</li><li>The key is what makes this different from re-rendering the whole list. <code>BindList</code> remembers which element it built for which key — add a row and only a new <code>&lt;li&gt;</code> is created; remove one and only that node is detached. Every other row's element is untouched, which is why text typed into an existing row survives adding another.</li><li><code>renderFn</code> runs once per key, not once per render. Wiring <code>reactive.On(remove, \"click\", ...)</code> inside it is safe because of that — it isn't rebinding a handler on every list update, only when that particular row is first created.</li><li><code>items.Update</code> replaces the whole slice with a new one, built with <code>slices.DeleteFunc</code>, missing that item. <code>BindList</code> diffs the new key set against the old one and patches the DOM to match — it never touches your slice directly.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			return nil
-		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var20), templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templates.WasmScript(c, "demo").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		return nil
-	})
-}
-
-func ExampleForms(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
-	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
-			return templ_7745c5c3_CtxErr
-		}
-		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-		if !templ_7745c5c3_IsBuffer {
-			defer func() {
-				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err == nil {
-					templ_7745c5c3_Err = templ_7745c5c3_BufErr
-				}
-			}()
-		}
-		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var21 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var21 == nil {
-			templ_7745c5c3_Var21 = templ.NopComponent
-		}
-		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var22 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-			if !templ_7745c5c3_IsBuffer {
-				defer func() {
-					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-					if templ_7745c5c3_Err == nil {
-						templ_7745c5c3_Err = templ_7745c5c3_BufErr
-					}
-				}()
-			}
-			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<h1>Two-way form bindings</h1><p class=\"lede\"><code>BindValue</code> and <code>BindChecked</code> keep a field and a signal in sync both ways. The summary line and the panel below it are both derived from the same two signals — nothing here talks to the DOM directly except the bindings.</p><div class=\"demo\" id=\"form-demo\"><p><label>Name <input data-name type=\"text\" placeholder=\"Ada\" aria-label=\"Name\"></label></p><p><label><input data-subscribe type=\"checkbox\"> Subscribe to updates</label></p><p class=\"demo-note\" data-summary></p><p class=\"demo-note\" data-thanks style=\"display:none\">Thanks — BindShow toggled this without rebuilding it.</p></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templates.CodeBlock(formSrc).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, " <h2>How it works</h2><ul><li><code>reactive.BindValue(el, s)</code> and <code>reactive.BindChecked(el, s)</code> are two-way: typing or checking writes to the signal, and the signal being set elsewhere writes back into the field. They don't feed back on themselves — <code>Signal.Set</code> ignores a write equal to the current value, so the effect that echoes the signal into the field simply doesn't fire again for the change that came from the field itself.</li><li>The summary text and the thanks panel both read <code>name</code> and <code>subscribed</code> independently. Neither binding knows the other exists — each just re-runs whenever a signal it reads changes, which is what \"fine-grained\" means here: two bindings, two independent effects, no shared render pass.</li><li><code>reactive.BindShow(el, fn)</code> toggles <code>display: none</code> based on a bool. It's the right call here because the panel holds no state worth throwing away — compare with <code>BindWhen</code> on the <a href=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var23 templ.SafeURL
-			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/reactive/") + "#conditional-subtrees")
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 235, Col: 64}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\">reactive docs</a>, which tears the subtree down and rebuilds it, for cases where it does.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			return nil
-		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var22), templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templates.WasmScript(c, "demo").Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		return nil
-	})
-}
-
-func ExampleAsync(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -556,7 +469,236 @@ func ExampleAsync(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<h1>Async data</h1><p class=\"lede\">A <code>Resource</code> exposes its loading and error states as signals alongside the data, so all three bind like anything else. The loader here sleeps instead of calling <code>wasmwrap.Fetch</code>, but the binding code is identical either way.</p><div class=\"demo\" id=\"async-demo\"><p><button data-reload>Reload</button></p><p class=\"demo-note\" data-status></p><ul data-posts class=\"todo-list\"></ul></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<h1>A counter</h1><p class=\"lede\">The smallest useful thing: a signal, a text binding, two handlers. The markup is static; only the number changes. This is the WebAssembly path — the same counter generated as plain JavaScript is <a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var26 templ.SafeURL
+			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-counter/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 139, Col: 42}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\">Counter, no WASM</a>.</p><div class=\"demo\" id=\"counter\"><button data-dec aria-label=\"Decrement\">&minus;</button> <output data-count>0</output> <button data-inc aria-label=\"Increment\">+</button><p class=\"demo-note\">Parity: <strong data-parity>even</strong></p></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templates.CodeBlock(counterSrc).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, " <h2>How it works</h2><ul><li><code>reactive.NewSignal(0)</code> creates the piece of state. Nothing subscribes to it yet — a signal on its own is just a boxed value with a <code>Get</code>/<code>Set</code>/<code>Update</code>.</li><li><code>reactive.Computed</code> derives <code>parity</code> from <code>count</code>. Calling <code>count.Get()</code> inside it is what creates the dependency — <code>Computed</code> doesn't need to be told what it depends on.</li><li><code>reactive.Hydrate(\"#counter\", ...)</code> finds the markup this page already rendered and runs the callback with it, instead of building any DOM from scratch.</li><li><code>root.Find(\"[data-count]\")</code> resolves a selector relative to the hydrated root, not the whole document — so this script can't accidentally touch another demo's markup on the same page.</li><li><code>reactive.BindText(el, fn)</code> re-runs <code>fn</code> and writes its result into <code>el</code>'s text every time something <code>fn</code> reads changes. That's the whole binding — no diffing, no virtual node.</li><li><code>reactive.On(el, \"click\", fn)</code> is <code>el.On</code> plus automatic cleanup; it exists so a handler bound inside a re-rendered view doesn't leak when a plain <code>wasmwrap</code> script wouldn't have that concern in the first place.</li><li><code>count.Update</code> reads and writes atomically — reaching for <code>Get</code> then <code>Set</code> separately would still work here since nothing else writes concurrently, but <code>Update</code> is the form that stays correct if that ever changes.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return nil
+		})
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var25), templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templates.WasmScript(c, "demo").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func ExampleList(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var27 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var27 == nil {
+			templ_7745c5c3_Var27 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Var28 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+			if !templ_7745c5c3_IsBuffer {
+				defer func() {
+					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err == nil {
+						templ_7745c5c3_Err = templ_7745c5c3_BufErr
+					}
+				}()
+			}
+			ctx = templ.InitializeContext(ctx)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<h1>A keyed list</h1><p class=\"lede\">Add and remove rows. Entries are keyed, so existing nodes are moved rather than rebuilt — type into a row, then add another and watch the text you typed survive. The compiled-markup version of this is <a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var29 templ.SafeURL
+			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-todo/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 189, Col: 39}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\">Keyed list</a>.</p><div class=\"demo\" id=\"todo\"><form data-form><input data-new type=\"text\" placeholder=\"Something to do\" aria-label=\"New item\"> <button type=\"submit\" data-add>Add</button></form><ul data-list class=\"todo-list\"></ul><p class=\"demo-note\"><strong data-remaining>0</strong> remaining</p></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templates.CodeBlock(listSrc).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, " <h2>How it works</h2><ul><li><code>reactive.BindList(list, items.Get, keyFn, renderFn)</code> takes four things: the parent element, a function that returns the current slice, a function that extracts each item's key, and a function that renders one item into an element.</li><li>The key is what makes this different from re-rendering the whole list. <code>BindList</code> remembers which element it built for which key — add a row and only a new <code>&lt;li&gt;</code> is created; remove one and only that node is detached. Every other row's element is untouched, which is why text typed into an existing row survives adding another.</li><li><code>renderFn</code> runs once per key, not once per render. Wiring <code>reactive.On(remove, \"click\", ...)</code> inside it is safe because of that — it isn't rebinding a handler on every list update, only when that particular row is first created.</li><li><code>items.Update</code> replaces the whole slice with a new one, built with <code>slices.DeleteFunc</code>, missing that item. <code>BindList</code> diffs the new key set against the old one and patches the DOM to match — it never touches your slice directly.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return nil
+		})
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var28), templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templates.WasmScript(c, "demo").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func ExampleForms(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var30 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var30 == nil {
+			templ_7745c5c3_Var30 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Var31 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+			if !templ_7745c5c3_IsBuffer {
+				defer func() {
+					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err == nil {
+						templ_7745c5c3_Err = templ_7745c5c3_BufErr
+					}
+				}()
+			}
+			ctx = templ.InitializeContext(ctx)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<h1>Two-way form bindings</h1><p class=\"lede\"><code>BindValue</code> and <code>BindChecked</code> keep a field and a signal in sync both ways. The summary line and the panel below it are both derived from the same two signals — nothing here talks to the DOM directly except the bindings. The compiled-markup version is <a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var32 templ.SafeURL
+			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/x-forms/"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 235, Col: 40}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\">Forms &amp; computed</a>.</p><div class=\"demo\" id=\"form-demo\"><p><label>Name <input data-name type=\"text\" placeholder=\"Ada\" aria-label=\"Name\"></label></p><p><label><input data-subscribe type=\"checkbox\"> Subscribe to updates</label></p><p class=\"demo-note\" data-summary></p><p class=\"demo-note\" data-thanks style=\"display:none\">Thanks — BindShow toggled this without rebuilding it.</p></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templates.CodeBlock(formSrc).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, " <h2>How it works</h2><ul><li><code>reactive.BindValue(el, s)</code> and <code>reactive.BindChecked(el, s)</code> are two-way: typing or checking writes to the signal, and the signal being set elsewhere writes back into the field. They don't feed back on themselves — <code>Signal.Set</code> ignores a write equal to the current value, so the effect that echoes the signal into the field simply doesn't fire again for the change that came from the field itself.</li><li>The summary text and the thanks panel both read <code>name</code> and <code>subscribed</code> independently. Neither binding knows the other exists — each just re-runs whenever a signal it reads changes, which is what \"fine-grained\" means here: two bindings, two independent effects, no shared render pass.</li><li><code>reactive.BindShow(el, fn)</code> toggles <code>display: none</code> based on a bool. It's the right call here because the panel holds no state worth throwing away — compare with <code>BindWhen</code> on the <a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var33 templ.SafeURL
+			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/reactive/") + "#conditional-subtrees")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 267, Col: 64}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\">reactive docs</a>, which tears the subtree down and rebuilds it, for cases where it does.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return nil
+		})
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var31), templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templates.WasmScript(c, "demo").Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func ExampleAsync(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var34 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var34 == nil {
+			templ_7745c5c3_Var34 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Var35 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+			if !templ_7745c5c3_IsBuffer {
+				defer func() {
+					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err == nil {
+						templ_7745c5c3_Err = templ_7745c5c3_BufErr
+					}
+				}()
+			}
+			ctx = templ.InitializeContext(ctx)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<h1>Async data</h1><p class=\"lede\">A <code>Resource</code> exposes its loading and error states as signals alongside the data, so all three bind like anything else. The loader here sleeps instead of calling <code>wasmwrap.Fetch</code>, but the binding code is identical either way.</p><div class=\"demo\" id=\"async-demo\"><p><button data-reload>Reload</button></p><p class=\"demo-note\" data-status></p><ul data-posts class=\"todo-list\"></ul></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -564,13 +706,13 @@ func ExampleAsync(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, " <h2>How it works</h2><ul><li><code>reactive.NewResource(load)</code> calls <code>load</code> immediately, on its own goroutine, and gives back a struct with three signals: <code>Data</code>, <code>Err</code> and <code>Loading</code>. It never returns the loaded value directly — you always read it back through <code>Data.Get()</code>, same as any other signal.</li><li>Because those three are ordinary signals, the status text binds to all of them the same way <code>BindText</code> binds to anything: read <code>Loading</code> first, fall back to <code>Err</code>, then show <code>Data</code> once there's something to show.</li><li>Clicking Reload calls <code>posts.Reload()</code>, which sets <code>Loading</code> back to true and starts the loader again. A generation counter inside <code>Resource</code> makes sure that if an older, slower load somehow finishes after a newer one, its result is discarded rather than overwriting fresher data.</li><li>The loader here calls <code>time.Sleep</code> instead of <code>wasmwrap.Fetch</code> so the demo doesn't depend on a real endpoint, but the binding code above doesn't know the difference — swap the loader for <code>reactive.FetchJSON[[]Post](\"/api/posts\")</code> and nothing else on this page changes.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, " <h2>How it works</h2><ul><li><code>reactive.NewResource(load)</code> calls <code>load</code> immediately, on its own goroutine, and gives back a struct with three signals: <code>Data</code>, <code>Err</code> and <code>Loading</code>. It never returns the loaded value directly — you always read it back through <code>Data.Get()</code>, same as any other signal.</li><li>Because those three are ordinary signals, the status text binds to all of them the same way <code>BindText</code> binds to anything: read <code>Loading</code> first, fall back to <code>Err</code>, then show <code>Data</code> once there's something to show.</li><li>Clicking Reload calls <code>posts.Reload()</code>, which sets <code>Loading</code> back to true and starts the loader again. A generation counter inside <code>Resource</code> makes sure that if an older, slower load somehow finishes after a newer one, its result is discarded rather than overwriting fresher data.</li><li>The loader here calls <code>time.Sleep</code> instead of <code>wasmwrap.Fetch</code> so the demo doesn't depend on a real endpoint, but the binding code above doesn't know the difference — swap the loader for <code>reactive.FetchJSON[[]Post](\"/api/posts\")</code> and nothing else on this page changes.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var25), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var35), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -598,12 +740,12 @@ func ExampleCanvas(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var26 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var26 == nil {
-			templ_7745c5c3_Var26 = templ.NopComponent
+		templ_7745c5c3_Var36 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var36 == nil {
+			templ_7745c5c3_Var36 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var27 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var37 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -615,7 +757,7 @@ func ExampleCanvas(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<h1>Canvas</h1><p class=\"lede\">A typed 2D context and an animation loop, with the drawing buffer matched to the device pixel ratio so it stays sharp.</p><div class=\"demo\" id=\"canvas-demo\"><canvas data-canvas width=\"600\" height=\"200\"></canvas><p><button data-toggle>Pause</button> <span class=\"demo-note\">Move the pointer over the canvas.</span></p></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<h1>Canvas</h1><p class=\"lede\">A typed 2D context and an animation loop, with the drawing buffer matched to the device pixel ratio so it stays sharp.</p><div class=\"demo\" id=\"canvas-demo\"><canvas data-canvas width=\"600\" height=\"200\"></canvas><p><button data-toggle>Pause</button> <span class=\"demo-note\">Move the pointer over the canvas.</span></p></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -623,13 +765,13 @@ func ExampleCanvas(c ssg.Ctx, prev, next *templates.NavItem) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, " <h2>How it works</h2><ul><li><code>root.Find(\"[data-canvas]\").AsCanvas()</code> gives back a typed canvas handle; <code>Context2D()</code> gets the 2D drawing context from it, same object <code>canvas.getContext(\"2d\")</code> would return in JavaScript, wrapped in Go types.</li><li><code>FitToDisplay(ctx2d)</code> matches the drawing buffer's pixel size to the element's CSS size times the device pixel ratio, and returns the logical size to draw against. Skipping this is why canvas drawings look blurry on high-DPI screens — the HTML <code>width</code>/<code>height</code> attributes are the pixel buffer, the CSS size is the display size, and they're different things.</li><li><code>pointer</code> is a plain signal, updated from a <code>pointermove</code> handler — nothing about it is canvas-specific. The animation loop reads it with <code>Peek()</code>, not <code>Get()</code>, because the loop already redraws every frame; a dependency there would do nothing but cost a lookup.</li><li><code>ctx2d.RequestAnimationFrame(fn)</code> reschedules itself and hands <code>fn</code> the frame's delta time in seconds — it drives a loop, not a single frame. The <code>cancel</code> it returns is what Pause calls to stop the loop, and calling <code>RequestAnimationFrame</code> again is what Resume uses to restart it.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, " <h2>How it works</h2><ul><li><code>root.Find(\"[data-canvas]\").AsCanvas()</code> gives back a typed canvas handle; <code>Context2D()</code> gets the 2D drawing context from it, same object <code>canvas.getContext(\"2d\")</code> would return in JavaScript, wrapped in Go types.</li><li><code>FitToDisplay(ctx2d)</code> matches the drawing buffer's pixel size to the element's CSS size times the device pixel ratio, and returns the logical size to draw against. Skipping this is why canvas drawings look blurry on high-DPI screens — the HTML <code>width</code>/<code>height</code> attributes are the pixel buffer, the CSS size is the display size, and they're different things.</li><li><code>pointer</code> is a plain signal, updated from a <code>pointermove</code> handler — nothing about it is canvas-specific. The animation loop reads it with <code>Peek()</code>, not <code>Get()</code>, because the loop already redraws every frame; a dependency there would do nothing but cost a lookup.</li><li><code>ctx2d.RequestAnimationFrame(fn)</code> reschedules itself and hands <code>fn</code> the frame's delta time in seconds — it drives a loop, not a single frame. The <code>cancel</code> it returns is what Pause calls to stop the loop, and calling <code>RequestAnimationFrame</code> again is what Resume uses to restart it.</li></ul><noscript><p class=\"warn\">This demo needs WebAssembly.</p></noscript>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var27), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var37), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -657,12 +799,12 @@ func ExampleTreeAndContent(c ssg.Ctx, prev, next *templates.NavItem) templ.Compo
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var28 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var28 == nil {
-			templ_7745c5c3_Var28 = templ.NopComponent
+		templ_7745c5c3_Var38 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var38 == nil {
+			templ_7745c5c3_Var38 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var29 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var39 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -674,20 +816,20 @@ func ExampleTreeAndContent(c ssg.Ctx, prev, next *templates.NavItem) templ.Compo
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<h1>Tree &amp; content</h1><p class=\"lede\">These build a site rather than run in one, so they're real code rather than a hydrated widget.</p><h2 id=\"building-the-tree\">Building the tree</h2><p><code>ssg.Node</code> and <code>Build</code> are the entire mechanism — this is what generates this site. See <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<h1>Tree &amp; content</h1><p class=\"lede\">These build a site rather than run in one, so they're real code rather than a hydrated widget.</p><h2 id=\"building-the-tree\">Building the tree</h2><p><code>ssg.Node</code> and <code>Build</code> are the entire mechanism — this is what generates this site. See <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var30 templ.SafeURL
-			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/the-node-tree/"))
+			var templ_7745c5c3_Var40 templ.SafeURL
+			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/the-node-tree/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 347, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 379, Col: 42}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\">The Node tree</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\">The Node tree</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -695,20 +837,20 @@ func ExampleTreeAndContent(c ssg.Ctx, prev, next *templates.NavItem) templ.Compo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, " <h2 id=\"markdown-collections\">Markdown collections</h2><p><code>content.LoadDir</code> plus <code>Node.Generate</code> turns a directory of markdown into one index page and one page per file, with no path arithmetic. See <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, " <h2 id=\"markdown-collections\">Markdown collections</h2><p><code>content.LoadDir</code> plus <code>Node.Generate</code> turns a directory of markdown into one index page and one page per file, with no path arithmetic. See <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var31 templ.SafeURL
-			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/content-and-collections/"))
+			var templ_7745c5c3_Var41 templ.SafeURL
+			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/content-and-collections/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 356, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 388, Col: 52}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\">Content &amp; collections</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "\">Content &amp; collections</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -716,20 +858,20 @@ func ExampleTreeAndContent(c ssg.Ctx, prev, next *templates.NavItem) templ.Compo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, " <h2 id=\"locales\">Locales</h2><p>A locale's subtree is derived from the base tree — you list only the pages that genuinely differ, and everything else is mirrored with the prefix set. See <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, " <h2 id=\"locales\">Locales</h2><p>A locale's subtree is derived from the base tree — you list only the pages that genuinely differ, and everything else is mirrored with the prefix set. See <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var32 templ.SafeURL
-			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/i18n/"))
+			var templ_7745c5c3_Var42 templ.SafeURL
+			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/i18n/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 364, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 396, Col: 49}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\">Locales &amp; i18n</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\">Locales &amp; i18n</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -739,7 +881,7 @@ func ExampleTreeAndContent(c ssg.Ctx, prev, next *templates.NavItem) templ.Compo
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var29), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var39), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -763,12 +905,12 @@ func ExampleScriptsAndRouting(c ssg.Ctx, prev, next *templates.NavItem) templ.Co
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var33 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var33 == nil {
-			templ_7745c5c3_Var33 = templ.NopComponent
+		templ_7745c5c3_Var43 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var43 == nil {
+			templ_7745c5c3_Var43 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var34 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var44 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -780,20 +922,20 @@ func ExampleScriptsAndRouting(c ssg.Ctx, prev, next *templates.NavItem) templ.Co
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<h1>Scripts &amp; routing</h1><h2 id=\"compiling-scripts\">Compiling scripts</h2><p><code>CompileFrom</code> is what turned <code>scripts/demo.go</code> into the WebAssembly running the demos in this section — no bundler, no <code>package.json</code>. See <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<h1>Scripts &amp; routing</h1><h2 id=\"compiling-scripts\">Compiling scripts</h2><p><code>CompileFrom</code> is what turned <code>scripts/demo.go</code> into the WebAssembly running the demos in this section — no bundler, no <code>package.json</code>. See <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var35 templ.SafeURL
-			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/scripts-and-wasm/"))
+			var templ_7745c5c3_Var45 templ.SafeURL
+			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/scripts-and-wasm/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 379, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 411, Col: 45}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\">Scripts &amp; WebAssembly</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\">Scripts &amp; WebAssembly</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -801,20 +943,20 @@ func ExampleScriptsAndRouting(c ssg.Ctx, prev, next *templates.NavItem) templ.Co
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, " <h2 id=\"client-side-routing\">Client-side routing</h2><p><code>reactive.Router</code> swaps views against the real address bar, which is exactly why it isn't embedded live on this page — a demo router would hijack this site's own navigation. This site's docs sidebar and pager are plain links, not a router; this is the shape a single-page app takes instead. See <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, " <h2 id=\"client-side-routing\">Client-side routing</h2><p><code>reactive.Router</code> swaps views against the real address bar, which is exactly why it isn't embedded live on this page — a demo router would hijack this site's own navigation. This site's docs sidebar and pager are plain links, not a router; this is the shape a single-page app takes instead. See <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var36 templ.SafeURL
-			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/reactive/"))
+			var templ_7745c5c3_Var46 templ.SafeURL
+			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/reactive/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 390, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 422, Col: 37}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\">reactive</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "\">reactive</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -824,7 +966,7 @@ func ExampleScriptsAndRouting(c ssg.Ctx, prev, next *templates.NavItem) templ.Co
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var34), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var44), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -848,12 +990,12 @@ func ExampleWasmwrapAndTempl(c ssg.Ctx, prev, next *templates.NavItem) templ.Com
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var37 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var37 == nil {
-			templ_7745c5c3_Var37 = templ.NopComponent
+		templ_7745c5c3_Var47 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var47 == nil {
+			templ_7745c5c3_Var47 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var38 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var48 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -865,20 +1007,20 @@ func ExampleWasmwrapAndTempl(c ssg.Ctx, prev, next *templates.NavItem) templ.Com
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<h1>wasmwrap &amp; templ</h1><h2 id=\"wasmwrap-without-reactive\">wasmwrap without reactive</h2><p><code>reactive</code> is optional. Every other demo in this section uses it, but <code>wasmwrap</code> alone is enough for scripting that doesn't need signals — a nav toggle is three lines. See <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<h1>wasmwrap &amp; templ</h1><h2 id=\"wasmwrap-without-reactive\">wasmwrap without reactive</h2><p><code>reactive</code> is optional. Every other demo in this section uses it, but <code>wasmwrap</code> alone is enough for scripting that doesn't need signals — a nav toggle is three lines. See <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var39 templ.SafeURL
-			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/wasmwrap/"))
+			var templ_7745c5c3_Var49 templ.SafeURL
+			templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/wasmwrap/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 405, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 437, Col: 37}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\">wasmwrap</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "\">wasmwrap</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -886,20 +1028,20 @@ func ExampleWasmwrapAndTempl(c ssg.Ctx, prev, next *templates.NavItem) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, " <h2 id=\"re-rendering-templ-client-side\">Re-rendering templ client-side</h2><p><code>BindTempl</code> runs a templ component in the browser and assigns the result as innerHTML — convenient for a display-only fragment, wrong for anything interactive, since everything inside is destroyed and rebuilt on every update. See <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, " <h2 id=\"re-rendering-templ-client-side\">Re-rendering templ client-side</h2><p><code>BindTempl</code> runs a templ component in the browser and assigns the result as innerHTML — convenient for a display-only fragment, wrong for anything interactive, since everything inside is destroyed and rebuilt on every update. See <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var40 templ.SafeURL
-			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/reactive/"))
+			var templ_7745c5c3_Var50 templ.SafeURL
+			templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/reactive/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 415, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 447, Col: 37}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "\">reactive</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "\">reactive</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -907,26 +1049,26 @@ func ExampleWasmwrapAndTempl(c ssg.Ctx, prev, next *templates.NavItem) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, " <p>For layouts, an SEO head and an RSS feed ready to copy in, see <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, " <p>For layouts, an SEO head and an RSS feed ready to copy in, see <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var41 templ.SafeURL
-			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/starter-templates/"))
+			var templ_7745c5c3_Var51 templ.SafeURL
+			templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/starter-templates/"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 421, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/examples.templ`, Line: 453, Col: 46}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\">Starter templates</a>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "\">Starter templates</a>.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var38), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = examplePage(c, prev, next).Render(templ.WithChildren(ctx, templ_7745c5c3_Var48), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
