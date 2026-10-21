@@ -1,16 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="astwerk — a Go-first static web framework">
-  <title>astwerk — a Go-first static web framework</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="astwerk — a Go-first static site generator">
+  <title>astwerk — a Go-first static site generator</title>
   <defs>
     <style>
       /* The OG image is standalone, so the palette is self-contained here —
          the same dark theme and indigo accent style/style.css defines. */
       :root {
-        --bg: #0f1117;
-        --bg-raised: #171a22;
-        --fg: #e8ebf2;
-        --muted: #9aa3b5;
-        --accent: #7c8cff;
-        --line: #272c3a;
+        --bg: #0b0c10;
+        --bg-raised: #12141a;
+        --fg: #e8eaf0;
+        --muted: #a2a8b6;
+        --accent: #8b9dff;
+        --line: #242833;
       }
     </style>
   </defs>
@@ -39,7 +39,7 @@
   </g>
 
   <text x="600" y="90" text-anchor="middle" fill="var(--fg)"
-        font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="700">astwerk</text>
+        font-family="Fraunces, Georgia, serif" font-size="78" font-weight="600">astwerk</text>
   <text x="600" y="145" text-anchor="middle" fill="var(--muted)"
-        font-family="Inter, system-ui, sans-serif" font-size="34">A Go-first static web framework</text>
+        font-family="Inter, system-ui, sans-serif" font-size="32">A Go-first static site generator</text>
 </svg>

@@ -148,6 +148,17 @@ ready for `Generate`:
 with hand-written nodes — one odd item can still be built by hand and merged
 into the result.
 
+The body is rendered by `Item.Content(ctx)`. Pass the `ssg.Ctx` the walker gives
+the page, so root-relative URLs and markdown components resolve against that
+page's path and locale:
+
+```go
+templ Post(c ssg.Ctx, it content.Item[Post]) {
+	<h1>{ it.Meta.Title }</h1>
+	@it.Content(c)
+}
+```
+
 <details>
 <summary>What Collection does under the hood</summary>
 
@@ -219,8 +230,8 @@ build time via chroma, so no JavaScript highlighter ships to the browser.
 
 **Raw HTML passes through unsanitized.** goldmark doesn't filter it, so a
 markdown file can drop into markup — and untrusted content can inject it. Only
-enable raw HTML for content you control, and treat `SetHTML`-style output the
-same way: never feed user input through it unescaped.
+enable raw HTML for content you control, and treat `templ.Raw` the same way:
+never feed user input through it unescaped.
 
 ## Example
 
@@ -234,13 +245,13 @@ func projects(dir string) ssg.Node {
 	var tiles []templ.Component
 	children := map[string]ssg.Node{}
 	for _, slug := range content.Slugs(pages) {
-		fm, _ := content.Decode[FrontMatter](pages[slug])
-		body := pages[slug].HTML
+		page := pages[slug]
+		fm, _ := content.Decode[FrontMatter](page)
 
 		children[slug] = ssg.Node{
 			Title: fm.Title,
 			Page:  func(c ssg.Ctx) templ.Component {
-				return views.ProjectPage(c.Title, c.Path, c.Prefix, body)
+				return views.ProjectPage(c.Title, c.Path, c.Prefix, page.Render(c))
 			},
 		}
 		tiles = append(tiles, views.Tile(fm.Title, fm.Description, slug))

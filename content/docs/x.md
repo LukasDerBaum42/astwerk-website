@@ -1,8 +1,9 @@
 +++
 Title = "x — compiled reactive markup"
 Description = "Markers that generate both the HTML and the JavaScript for a page at build time — no WASM, no framework."
-Order = 110
-Group = "Add interactivity"
+Order = 310
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 `x` is interactive UI without WASM and without a JavaScript framework. Markers
@@ -12,8 +13,8 @@ keeps it live, in the same call. No build pass, no selector to keep in sync.
 
 The idea — move reactivity to build time and ship the compiled result — is the
 one Svelte made famous; `x` is the Go-shaped version, with no `.svelte` file
-format and no Node toolchain. See the [comparison](../comparison/#astwerk-vs-svelte)
-for the full contrast.
+format and no Node toolchain. It is an astwerk-live extension, not part of
+core astwerk, and this page is still moving.
 
 Everything below is opt-in: outside a `Document` the markers render plain
 static HTML, so a page with no markers ships no script at all.

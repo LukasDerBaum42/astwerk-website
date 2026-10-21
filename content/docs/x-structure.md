@@ -1,8 +1,9 @@
 +++
 Title = "x — structure & scripts"
 Description = "Conditional and keyed subtrees, effects, and the JavaScript escape hatch."
-Order = 120
-Group = "Add interactivity"
+Order = 320
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 The markers that change the document's structure or run code of their own:

@@ -67,9 +67,9 @@ Generierte Schlüssel gewinnen — still. Wenn ein `Generate` einen Schlüssel
 zurückgibt, der auch in `Children` existiert, ersetzt der generierte Knoten den
 handgeschriebenen. Benenne sie bewusst und teste die Ausgabe.
 
-## Das WASM-Minimum pro Widget erwarten
+## Annehmen, dass eine Seite JavaScript ausliefert
 
-Die ~2-MB-Go-Laufzeit gilt pro Binary, nicht pro Widget. Ein `.wasm` pro Seite
-(das die Laufzeit teilt) ist weit billiger als eines pro interaktiver Region.
-Wenn eine Seite nur einen Zähler und einen Umschalter braucht, ist das `x`'s
-Job — greif zu WASM, wenn die interaktive Hälfte ein Programm ist.
+Der Kern von astwerk gibt HTML und CSS aus. Eine Seite hat nur dann
+JavaScript, wenn du ein `<script>`-Tag oder einen `CompileFrom`-Knoten
+hinzufügst. Wenn eine generierte Seite ein Skript enthält, das du nicht
+geschrieben hast, suche die Vorlage oder Komponente, die es injiziert hat.

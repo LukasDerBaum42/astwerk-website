@@ -23,10 +23,10 @@ update can't break them.
 
 ### Client-side add-ons
 
-The reactive page and widgets (`pages/reactive.templ`, `widgets/`) live in
-[astwerk-live](https://github.com/LukasDerBaum42/astwerk-live) — copy them from
-its `starter/` on top of these files. They use `x`, which, unlike the
-placeholder paths, is a real import and needs no rewriting.
+Additional starter files for the optional client-side packages live in
+[astwerk-live](https://github.com/LukasDerBaum42/astwerk-live). They are not
+part of core astwerk, that side is still in heavy redesign, and this page does
+not rely on any of it.
 
 ### The files
 

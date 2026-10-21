@@ -12,17 +12,16 @@ und schreibt Dateien. Vorlagen sind
 typprüfbar.
 
 Neu hier? Lies zuerst [Wie astwerk denkt](../how-astwerk-thinks/) — die ganze
-Architektur auf einer Seite. Für eine Schritt-für-Schritt-Anleitung gibt es
-das [Build a site](../../tutorial/)-Tutorial.
+Architektur auf einer Seite.
 
 ## Voraussetzungen
 
 - **Go 1.27 oder neuer** — die Go-Werkzeugkette ist das Build-System.
 - **Die templ-CLI** — kompiliert `.templ`-Dateien zu Go. Das ist die gesamte
   Werkzeugkette: kein Node.js, kein Bundler, kein Plugin-System.
-- **Ein aktueller Browser** für die interaktiven Wege: `x` braucht JavaScript
-  (die Seite funktioniert auch ohne, sie aktualisiert sich nur nicht), und
-  `reactive` braucht einen Browser mit WebAssembly-Unterstützung.
+- **Ein aktueller Browser**, um dir die erzeugte Seite anzusehen. Der Kern von
+  astwerk gibt reines HTML und CSS aus; Skripte sind nur da, wenn du sie
+  hinzufügst.
 
 ## Installieren
 
@@ -84,5 +83,6 @@ go run .
 ```
 
 Das schreibt `build/index.html`. Mehr Seiten, eine Vorlage darum, Markdown
-dazu und ein Entwicklungs-Server — Schritt für Schritt im
-[Tutorial](../../tutorial/).
+dazu und ein Entwicklungs-Server — siehe
+[The Node tree](../the-node-tree/), [Content & collections](../content-and-collections/)
+und [Dev server](../dev-server/).

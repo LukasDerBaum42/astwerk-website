@@ -133,8 +133,8 @@ Page: func(c ssg.Ctx) templ.Component {
 See [Content & collections](../content-and-collections/).
 
 ```go
-p, _   := content.Load("content/x.md")
-p, _   := content.Parse(src)
+p, _   := content.Load("content/notes.md")
+p, _    = content.Parse(src)
 pages, _ := content.LoadDir("content/docs")  // non-recursive, keyed by slug
 pages, _ := content.LoadTree("content/blog") // recursive, keys like "2024/hello"
 
@@ -188,11 +188,12 @@ func projects() ssg.Node {
 	var tiles []templ.Component
 	children := map[string]ssg.Node{}
 	for _, slug := range content.Slugs(pages) {
-		fm, _ := content.Decode[FrontMatter](pages[slug])
-		body := pages[slug].HTML
+		page := pages[slug]
+		fm, _ := content.Decode[FrontMatter](page)
+
 		children[slug] = ssg.Node{
 			Title: fm.Title,
-			Page:  func(c ssg.Ctx) templ.Component { return views.Project(c.Title, body) },
+			Page:  func(c ssg.Ctx) templ.Component { return views.Project(c.Title, page.Render(c)) },
 		}
 		tiles = append(tiles, views.Tile(fm.Title, fm.Description, slug))
 	}
@@ -206,6 +207,29 @@ func projects() ssg.Node {
 ```
 
 Pagination: `content.Chunk(items, size)` splits a slice; build the pages yourself.
+
+## Assets
+
+Sidecar metadata pairs a directory of files with a `meta.json` or `meta.toml`
+in the same directory:
+
+```go
+type Media struct {
+	Credit  string `json:"credit" toml:"credit"`
+	License string `json:"license" toml:"license"`
+}
+
+entries, err := assets.LoadTree[Media]("public/img", assets.Options[Media]{
+	Include: []string{"*.png", "*.jpg", "*.webp"},
+})
+
+for _, e := range entries {
+	// e.File.Path, e.Meta.Credit, e.Meta.License
+}
+```
+
+`LoadTree` is recursive; `LoadDir` reads one directory. Files without a
+sidecar entry are included with the zero `T`; `RequireMeta` drops them.
 
 ## Locales
 
@@ -252,13 +276,15 @@ See [Scripts & WebAssembly](../scripts-and-wasm/).
 
 package main
 
-import "github.com/LukasDerBaum42/astwerk-live/wasmwrap"
+import "syscall/js"
 
 func main() {
-	wasmwrap.Query("#toggle").On("click", func(e wasmwrap.Event) {
-		e.PreventDefault()
-		wasmwrap.Query("#nav").Class().Toggle("open")
-	})
+	doc := js.Global().Get("document")
+	doc.Call("querySelector", "#toggle").Call("addEventListener", "click",
+		js.FuncOf(func(js.Value, []js.Value) any {
+			doc.Call("querySelector", "#nav").Get("classList").Call("toggle", "open")
+			return nil
+		}))
 	select {} // keep the module alive
 }
 ```
@@ -279,193 +305,13 @@ templ WasmScript(c ssg.Ctx, name string) {
 }
 ```
 
-## x — compiled reactive markup
+## Extensions
 
-See [x](../x/) and [x — structure & scripts](../x-structure/).
-
-```go
-var count = x.NamedNumSignal("count", 0) // named, so scripts can read it
-var open  = x.NewBoolSignal(false)
-```
-
-```templ
-@x.Document(counter())
-
-templ counter() {
-	<div>
-		@count
-		@x.El("button", x.On("click", count.Inc(1))) {
-			+
-		}
-		@x.El("button", x.On("click", count.SetTo(0))) {
-			reset
-		}
-		@x.El("button", x.On("click", open.Toggle())) {
-			toggle
-		}
-		@x.When(open, secret())
-	</div>
-}
-```
-
-Bindings:
-
-```templ
-@x.El("a", x.Attr("href", url))        { link }
-@x.El("span", x.Class("on", active))   { toggled class }
-@x.El("button", x.Disabled(busy))      { save }
-@x.El("p", x.Show(visible))            { shown }
-@x.El("p", x.Style("color", colour))   { styled }
-```
-
-Forms and computed values:
-
-```go
-var price = x.NewNumSignal(10.0)
-var qty   = x.NewNumSignal(2.0)
-var total = x.Computed(x.Mul(price, qty))
-```
-
-```templ
-@x.Number(price)
-@x.Number(qty)
-@x.Text(total)
-@x.Input(draft)
-@x.Checkbox(subscribed)
-```
-
-Structure and effects:
-
-```templ
-@x.List(todos, "id", todoRow, "todoRow")
-@x.Effect() {
-	<script>document.title = "Count: " + count.get();</script>
-}
-@x.Script() {
-	/* arbitrary JavaScript */
-}
-```
-
-Actions: `Set`, `SetTo`, `Inc`, `Dec`, `Toggle`; expressions: `Add`, `Sub`,
-`Mul`, `Div`, `Concat`, `Gt`/`Lt`/`Gte`/`Lte`/`Eq`/`Ne`, `Not`, `Lit`;
-composition: `Seq`, `If`. Anything else is a `<script>` reading the named
-signals — that is the escape hatch.
-
-## wasmwrap
-
-See [wasmwrap](../wasmwrap/) and [wasmwrap — canvas](../wasmwrap-canvas/).
-
-```go
-el := wasmwrap.Query("#box")
-el.Style().Color("red").Display("block")
-el.SetText("hi").SetAttr("data-id", "7").Class().Add("row")
-
-wasmwrap.Create("li").Append(child)
-btn.On("click", handler)        // returns an unsubscribe func
-body, err := wasmwrap.Fetch("/api/thing") // blocks; safe outside handlers
-
-canvas := wasmwrap.Query("#c").AsCanvas()
-ctx := canvas.Context2D()
-w, h := canvas.FitToDisplay(ctx)
-ctx.FillStyle("#4f7cff").BeginPath().Arc(w/2, h/2, 40, 0, 2*math.Pi).Fill()
-
-el.Value().Call("scrollIntoView", map[string]any{"behavior": "smooth"})
-```
-
-A failed `Query` returns an element where `Exists()` is false; readers return
-zero values — missing is inert, not a panic.
-
-## reactive
-
-See [reactive — state](../reactive/), [DOM bindings](../reactive-bindings/),
-[routing & async](../reactive-router/) and
-[templ in the browser](../reactive-templ/).
-
-```go
-count := reactive.Num(0)          // split types: Num, Bool, Str, List
-count.Get(); count.Peek(); count.Set(5)
-count.Inc(1); count.Dec(1)        // the one-word forms
-count.Subscribe(fn)               // manual subscription
-
-full := reactive.Computed(func() string { return first.Get() + " " + last.Get() })
-full.Dispose()                    // detach from inputs
-
-reactive.Effect(func() { fmt.Println(count.Get()) }) // tracks deps automatically
-reactive.Batch(func() { first.Set("Ada"); last.Set("Lovelace") })
-reactive.Untracked(func() string { return count.Get() }) // read, no subscription
-dispose := reactive.Scope(func() { /* effects owned here */ })
-```
-
-DOM bindings — signals and memos bind directly (they are `Readable`):
-
-```go
-reactive.BindText(el, count)                       // formats numbers too
-reactive.BindHTML(el, md)                          // unescaped — never user input
-reactive.BindAttr(el, "disabled", reactive.Computed(func() string { /* "" removes it */ }))
-reactive.BindClass(el, "active", isActive)
-reactive.BindStyle(el, "color", colour)
-reactive.BindShow(el, visible)
-reactive.BindWhen(parent, cond, renderDashboard)
-reactive.BindValue(input, draft)                   // *StrSignal
-reactive.BindNumber(input, amount)                 // *NumSignal, ignores unparseable input
-reactive.BindChecked(box, done)                    // *BoolSignal
-reactive.On(el, "click", handler)                  // auto-cleanup
-```
-
-Keyed lists:
-
-```go
-reactive.BindList(list, items,
-	func(t Todo) string { return t.ID },
-	func(t Todo, row *reactive.Row) wasmwrap.Element {
-		el := wasmwrap.Create("li").SetText(t.Text)
-		return el
-	})
-```
-
-Routing and async:
-
-```go
-reactive.Router(root, []reactive.Route{
-	{Path: "/", View: home},
-	{Path: "/projects/:slug", View: func(p reactive.Params) wasmwrap.Element {
-		return project(p.Get("slug"))
-	}},
-	{Path: "/*", View: notFound},
-})
-reactive.InterceptLinks(wasmwrap.Body())
-
-posts := reactive.NewResource(func() ([]Post, error) {
-	return reactive.FetchJSON[[]Post]("/api/posts")
-})
-posts.Loading.Get(); posts.Err.Get(); posts.Data.Get(); posts.Reload()
-```
-
-Using templ in the browser:
-
-```go
-reactive.Hydrate("#counter", func(root wasmwrap.Element) {
-	reactive.BindText(root.Find("[data-count]"), count)
-})
-reactive.HydrateAll(".widget", mount)                    // hydrate every match
-reactive.RenderTempl(views.Row(item))                     // component → string
-reactive.TemplElement("li", views.Row(item))              // component → element
-reactive.BindTempl(preview, func() templ.Component { return views.Markdown(src.Get()) })
-```
-
-## Testing
-
-See [Testing](../testing/).
-
-```go
-func init() { jsdom.Install() }
-
-func TestCounter(t *testing.T) {
-	jsdom.Reset()
-	root := wasmwrap.Wrap(jsdom.NewElement("div"))
-	// mount, act, assert
-}
-```
+The client-side packages are not core astwerk. They live in the separate
+[astwerk-live](https://github.com/LukasDerBaum42/astwerk-live) module, are
+optional, and are still in heavy redesign. See
+[client-side tools](../which-tool/) for the decision table and the extension
+pages that follow it.
 
 ## Dev server
 

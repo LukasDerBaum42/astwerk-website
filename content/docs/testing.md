@@ -1,8 +1,9 @@
 +++
 Title = "Testing"
 Description = "Unit-test reactive and wasmwrap bindings with jsdom — no browser, no headless driver."
-Order = 220
-Group = "Reference"
+Order = 390
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 `GOOS=js GOARCH=wasm go test` runs under node, which has no DOM. The `jsdom`

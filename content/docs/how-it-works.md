@@ -1,6 +1,6 @@
 +++
 Title = "How it works"
-Description = "The walker, locale derivation, and dependency tracking — the three mechanisms, in full."
+Description = "The walker, locale derivation and content loading — the three mechanisms, in full."
 Order = 230
 Group = "Reference"
 +++
@@ -14,7 +14,7 @@ them are readable in one sitting.
 | --- | --- | --- |
 | The walker | `ssg/build.go` | depth-first recursion that writes the output |
 | Locale derivation | `ssg/locale.go` | mirrors the base tree per locale, applies overrides |
-| Dependency tracking | `reactive/signal.go` | signal reads register with the running effect |
+| Content loading | `content/collection.go` | markdown and front matter become typed items |
 
 ## The walker
 
@@ -68,6 +68,17 @@ ssg: render build/projects/thing/index.html: …
 No partial-success reporting, no continuing past a broken page. A site that
 half-built is worse than one that didn't.
 
+## Content loading
+
+`content` is deliberately a separate package from `ssg`: the walker does not
+know what markdown is. `LoadCollection[T]` reads a directory, decodes each
+front matter block into `T`, and keeps the page body for `Item.Content(ctx)`.
+The site decides what to do with the items — usually one index page plus one
+child per item through `Node.Generate`.
+
+That split is why markdown is optional. A site made only of templ pages never
+imports `content` at all.
+
 ## Locale derivation
 
 `BuildLocales` copies the base tree and mounts the copy under the locale's code.
@@ -88,67 +99,20 @@ field doesn't drop the rest and why the locale root needs no special case —
 unexported field of the locale's root node and inherited downward by the walker,
 which is how a page five levels deep still knows its prefix.
 
-## Dependency tracking
+## The build step
 
-`reactive` uses two package-level variables. That's the entire mechanism:
+`CopyFrom` and `CompileFrom` are the two fields that write files without a
+page. `CopyFrom` copies a directory verbatim, which is how `style/` and
+`public/` reach the output. `CompileFrom` hands a scripts directory to
+`ssg.CompileScripts`: wasm-tagged Go files become `.wasm` modules, `.ts` files
+go to `tsc`, and anything else is ignored so helper packages can live
+alongside.
 
-```go
-var (
-	owner    *effect // who disposes what — nested effects attach here
-	observer *effect // who depends on what — signal reads register here
-)
-```
-
-`Signal.Get` links the current `observer` to the signal's subscriber list.
-`Signal.Set` walks that list and re-runs each subscriber. Before an effect
-re-runs, it unlinks from everything it read last time and re-collects as it goes —
-which is why dependencies are dynamic for free, and why a branch not taken creates
-no subscription.
-
-Keeping `owner` and `observer` separate matters more than it looks. Conflating
-them was a bug during development: `Untracked` has to stop dependencies being
-recorded *without* orphaning effects created inside it, and with one variable
-doing both jobs those effects escaped their parent and were never disposed.
+Both are build-time concerns, not runtime ones. A site with neither ships
+exactly the HTML its templates produce.
 
 <details>
-<summary>Change detection with an unconstrained type</summary>
-
-`Signal[T]` accepts any `T`, so `==` isn't available at compile time. Comparison
-goes through `any`, which works for comparable dynamic types and panics for
-slices, maps and funcs:
-
-```go
-func equalValues[T any](a, b T) (eq bool) {
-	defer func() {
-		if recover() != nil {
-			eq = false
-		}
-	}()
-	return any(a) == any(b)
-}
-```
-
-Recovering to "not equal" is the safe direction: a spurious re-run is wasteful,
-a missed one is a bug.
-
-</details>
-
-<details>
-<summary>Why no virtual DOM</summary>
-
-A VDOM exists to make "re-render everything" cheap. Fine-grained bindings make it
-unnecessary — a binding knows which property it owns, so it writes that property
-and nothing else. `BindList` is the only place doing real reconciliation, and it
-works from keys you supply rather than by diffing rendered output.
-
-The cost is that you write bindings instead of templates for interactive parts.
-The benefit is that nothing is ever destroyed and rebuilt behind your back, so
-focus, scroll position and transitions survive without special handling.
-
-</details>
-
-<details>
-<summary>Reading the source, and this site</summary>
+<summary>Reading the source</summary>
 
 Roughly in order of how much they'll teach you:
 
@@ -157,21 +121,16 @@ Roughly in order of how much they'll teach you:
 | `ssg/build.go` | the walker |
 | `ssg/node.go` | `Node`, `Ctx`, `BuildOptions` |
 | `ssg/locale.go` | tree derivation and override application |
-| `reactive/signal.go` | the dependency graph; no build constraints, so it's host-testable |
-| `reactive/list.go` | keyed reconciliation |
-| `wasmwrap/element.go` | the `syscall/js` wrapping style everything else follows |
-
-`reactive/signal.go` carries no build constraint on purpose: the tracking logic is
-pure Go and gets fast host tests, while only the DOM half needs node. Two real
-bugs surfaced that way — the ownership split above, and `BindList` disposing the
-very entries it was reusing.
+| `content/collection.go` | `Collection[T]`, `Item[T]`, sorting and filtering |
+| `content/markdown.go` | front matter, markdown rendering, components |
+| `devserver/devserver.go` | watch, rebuild, reload |
+| `assets/assets.go` | sidecar metadata |
 
 This site is built with astwerk, source at
 [astwerk-website](https://github.com/LukasDerBaum42/astwerk-website). Writing it
-found four gaps that nothing else had: no base-path support (every link broke
+found three gaps that nothing else had: no base-path support (every link broke
 under `/astwerk/`), no way to configure the markdown renderer (so no syntax
-highlighting), no locale-independent path for a language switcher, and no
-`InsertBefore` for keyed list ordering. All four are in the library now. That is
-what a real test is for.
+highlighting), and no locale-independent path for a language switcher. All
+three are in the library now. That is what a real test is for.
 
 </details>

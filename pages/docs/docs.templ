@@ -7,11 +7,18 @@ import (
 
 // DocPage renders one documentation page.
 //
-// body is HTML that goldmark already produced from markdown, so it goes through
+// body is HTML rendered at build time from markdown, so it goes through
 // templ.Raw rather than being escaped.
-templ DocPage(c ssg.Ctx, sidebar []templates.NavGroup, description string, body string, prev, next *templates.NavItem) {
-	@templates.Layout(c, sidebarTitle(c), sidebar, nil) {
+templ DocPage(c ssg.Ctx, sidebar []templates.NavGroup, description string, body string, extension bool, prev, next *templates.NavItem) {
+	@templates.Layout(c, sidebarTitle(c), sidebar) {
 		<article class="prose">
+			if extension {
+				<p class="extension-note">
+					<b>Extension.</b> This page covers <code>astwerk-live</code>, not
+					core astwerk. The package is optional, under heavy redesign, and
+					very likely to change or be removed.
+				</p>
+			}
 			<h1>{ c.Title }</h1>
 			if description != "" {
 				<p class="lede">{ description }</p>
@@ -35,21 +42,26 @@ templ DocPage(c ssg.Ctx, sidebar []templates.NavGroup, description string, body 
 
 // DocsIndex lists every documentation page as a card, with its summary.
 templ DocsIndex(c ssg.Ctx, sidebar []templates.NavGroup, entries []DocSummary) {
-	@templates.Layout(c, sidebarTitle(c), sidebar, nil) {
+	@templates.Layout(c, sidebarTitle(c), sidebar) {
 		<article class="prose">
 			<h1>{ sidebarTitle(c) }</h1>
 			<p class="lede">
-				New here? Start with <a href={ c.Link("docs/how-astwerk-thinks/") }>How
-				astwerk thinks</a> — the whole architecture on one page — then
-				<a href={ c.Link("docs/getting-started/") }>Getting started</a> to build
-				your first site. When you hit a widget decision,
-				<a href={ c.Link("docs/which-tool/") }>Which tool do I use?</a> is the
-				shortcut. The <a href={ c.Link("docs/quick-reference/") }>Quick
-				reference</a> is the whole API on one page.
+				astwerk is a Go-first static site generator. Start with
+				<a href={ c.Link("docs/how-astwerk-thinks/") }>How astwerk thinks</a>
+				— the whole architecture on one page — then
+				<a href={ c.Link("docs/getting-started/") }>Getting started</a> to
+				build your first site. The
+				<a href={ c.Link("docs/quick-reference/") }>Quick reference</a> is
+				the core API on one page.
+			</p>
+			<p>
+				The last group is different: those pages document optional
+				<code>astwerk-live</code> extensions, are still under heavy redesign,
+				and are very likely to change or be removed.
 			</p>
 			<div class="cards">
 				for _, e := range entries {
-					@docCard(e.Title, e.Description, c.Link(e.Path))
+					@docCard(e.Title, e.Description, c.Link(e.Path), e.Extension)
 				}
 			</div>
 		</article>
@@ -57,9 +69,14 @@ templ DocsIndex(c ssg.Ctx, sidebar []templates.NavGroup, entries []DocSummary) {
 }
 
 // docCard is one entry in the docs index.
-templ docCard(title string, body string, href string) {
+templ docCard(title string, body string, href string, extension bool) {
 	<a class="card" href={ href }>
-		<h3>{ title }</h3>
+		<h3>
+			{ title }
+			if extension {
+				<span class="card-tag">extension</span>
+			}
+		</h3>
 		<p>{ body }</p>
 	</a>
 }
@@ -78,10 +95,11 @@ type DocSummary struct {
 	Title       string
 	Description string
 	Path        string
+	Extension   bool
 }
 
 templ NotFound(c ssg.Ctx) {
-	@templates.Layout(c, "", nil, nil) {
+	@templates.Layout(c, "", nil) {
 		<article class="prose">
 			<h1>404</h1>
 			<p>That page doesn't exist.</p>

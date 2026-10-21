@@ -4,12 +4,14 @@ The [astwerk](https://github.com/LukasDerBaum42/astwerk) documentation site,
 built with astwerk. Deployed to
 <https://lukasderbaum42.github.io/astwerk-website/>.
 
-It lives in its own repository so the library stays a library: the site's
-dependencies — chroma, the goldmark extensions — never reach anyone who
-`go get`s astwerk, and the library's module has nothing in it but the library.
+It documents **core astwerk**: `ssg`, `content`, `assets`, `devserver` and
+`starter`. The optional client-side packages (`x`, `reactive`, `wasmwrap`,
+`jsdom`) live in [astwerk-live](https://github.com/LukasDerBaum42/astwerk-live);
+their docs are kept in the final **Extensions (astwerk-live)** group and marked
+as still moving. The site does not compile or ship any of them.
 
-It depends on a **published tag** of astwerk, like any other consumer would.
-That's the point: if the site builds, the released API is usable as released.
+The tutorial was archived to `_archive/tutorial/` while the site is rewritten
+around the core. It is not deleted and not part of the build.
 
 ## Building
 
@@ -44,7 +46,7 @@ when a workspace is redirecting the code to a sibling checkout.
 Bumping to a new release is the ordinary thing:
 
 ```bash
-go get github.com/LukasDerBaum42/astwerk@v0.8.0
+go get github.com/LukasDerBaum42/astwerk@v0.9.0
 go mod tidy
 ```
 
@@ -65,23 +67,30 @@ Graph, which have to be absolute.
 
 ## Layout
 
-Following the same split as the original site: `templates/` for the shared shell,
-and page bodies in their own package.
-
 | | |
 | --- | --- |
 | `main.go` | the Node tree, markdown config, docs loading |
-| `templates/` | the shell — `Layout`, `CodeBlock`, `WasmScript`, `NavItem` |
-| `pages/` | page bodies — `Home`, `DocPage`, `DocsIndex`, `Examples`, `NotFound` |
+| `templates/` | the shell — `Layout`, `CodeBlock`, `Card`, `Sidebar` |
+| `pages/home/` | the English and German home pages |
+| `pages/docs/` | `DocPage`, `DocsIndex`, `NotFound` |
+| `pages/examples/` | the four core example pages (overview + three examples) |
 | `content/docs/*.md` | the documentation, ordered by `Order` in front matter |
-| `scripts/` | the wasm programs — `demo/`, `router_demo/`, `bridge_demo/`, `tutorial_game.go` — compiled by `CompileFrom` |
-| `scripts/game/` | the tutorial game's pure-Go ledger, host-tested (`go test ./scripts/game`) |
+| `content/de/docs/*.md` | German translations; the rest falls back to English |
+| `_archive/tutorial/` | the old tutorial, kept but not built |
 | `style/style.css` | hand-written, no preprocessor |
 | `style/code.css` | **generated** — see below |
 | `tools/gencss` | regenerates `style/code.css` from chroma |
 | `site_test.go` | builds the site and validates every link resolves |
 
 `pages` imports `templates`; nothing goes the other way.
+
+## Docs groups
+
+Core docs occupy Introduction, Build a site, Add content, Reference and
+Deploy. Anything whose front matter says `Group = "Extensions (astwerk-live)"`
+and `Extension = true` is rendered with an extension banner and a warning in
+the sidebar. Those pages document optional astwerk-live packages and are
+expected to change.
 
 ## Regenerating the syntax highlighting CSS
 
@@ -113,8 +122,12 @@ Drop a markdown file in `content/docs/` with front matter:
 Title = "My page"
 Description = "One line for the index and the sidebar."
 Order = 45
+Group = "Build a site"
 +++
 ```
 
 `Order` decides the sidebar and pager sequence. Nothing else to wire up — the
 tree generates the node, the sidebar, the index entry and the prev/next links.
+
+For an extension page, add `Extension = true` and put it in the
+`Extensions (astwerk-live)` group at the end of the order range.

@@ -2,51 +2,50 @@ package home
 
 import (
 	"github.com/LukasDerBaum42/astwerk-website/templates"
-	x "github.com/LukasDerBaum42/astwerk-live/x"
 	"github.com/LukasDerBaum42/astwerk/ssg"
 )
 
 // HomeDE is the German home page, mounted under /de/ by the German locale's
-// override. It is the same page as Home, translated — the accent switcher and
-// the hero's live tree are shared components, because the demo itself doesn't
-// change with the language.
+// override. It is the same page as Home, translated — the tree demo and the
+// accent picker are shared, because the behaviour does not change with the
+// language.
 templ HomeDE(c ssg.Ctx) {
-	@templates.Layout(c, "", nil, nil) {
-		@x.Document(homeBodyDE(c), templates.XOptions()...)
+	@templates.Layout(c, "", nil) {
+		@homeBodyDE(c)
+		@homeWidgets()
 	}
 }
 
 templ homeBodyDE(c ssg.Ctx) {
 	<section class="hero">
 		<div class="hero-copy">
-			<p class="eyebrow">Statische Seiten, keine Magie</p>
+			<p class="eyebrow">Statische Seiten, Go-first</p>
 			<h1>astwerk</h1>
 			<p class="tagline">
-				Ein Go-first Static-Web-Framework mit optionaler Client-Laufzeit.
-				Standardmäßig reines HTML; winziges kompiliertes JavaScript, wenn du
-				ein bisschen Interaktivität brauchst; volles Go&nbsp;&rarr;&nbsp;WASM,
-				wenn du die ganze Sprache brauchst. Kein Node, keine Konfiguration,
-				keine Magie.
+				Ein Static-Site-Generator, der einfach ein Go-Programm ist.
+				Beschreibe das Ausgabeverzeichnis als Baum, rufe
+				<code>Build</code> auf, bekomme HTML. Keine Konfiguration, keine
+				Konventionen, keine Client-Laufzeit im Kern.
 			</p>
 			<pre class="install"><code>go get github.com/LukasDerBaum42/astwerk</code></pre>
 			<p class="cta">
-				<a class="button" href={ c.Link("tutorial/") }>Eine Seite bauen</a>
+				<a class="button" href={ c.Link("docs/getting-started/") }>Loslegen</a>
 				<a class="button ghost" href={ c.Link("docs/") }>Dokumentation</a>
-				<a class="button ghost" href={ c.Link("examples/") }>In Aktion sehen</a>
+				<a class="button ghost" href={ c.Link("examples/") }>Beispiele</a>
 			</p>
 			<p class="hero-links">
 				<a href={ c.Link("docs/how-astwerk-thinks/") }>Wie astwerk denkt</a>
 				&middot;
-				<a href={ c.Link("docs/which-tool/") }>Welches Werkzeug brauche ich?</a>
+				<a href={ c.Link("docs/quick-reference/") }>Kurzreferenz</a>
 			</p>
 			<ul class="badges">
 				<li>Go 1.27+</li>
 				<li>Kein Node.js</li>
-				<li>Null Konfiguration</li>
+				<li>Keine Konfiguration</li>
 				<li>MIT</li>
 			</ul>
 		</div>
-		@heroTree()
+		@heroTree("der Baum ist die Seite", "Schalte einen Knoten um — reines JavaScript, keine Client-Laufzeit.")
 	</section>
 
 	<section class="law">
@@ -71,37 +70,54 @@ templ homeBodyDE(c ssg.Ctx) {
 		<p>
 			Das schreibt <code>build/index.html</code>,
 			<code>build/docs/index.html</code>, kopiert <code>style/</code> hinein
-			und kompiliert <code>scripts/</code> zu WebAssembly.
+			und kompiliert <code>scripts/</code>, wenn ein Skript die
+			wasm-Build-Constraint trägt.
 		</p>
 	</section>
 
 	<section>
-		<h2>Was du bekommst</h2>
+		<h2>Der Kern in sechs Teilen</h2>
 		<p>
-			Alles hier ist optional und kombinierbar — starte mit dem
-			Baum-Walker und füge hinzu, was die Seite braucht. Du weißt nicht,
-			wohin eine Funktion gehört?
-			<a href={ c.Link("docs/which-tool/") }>Welches Werkzeug brauche ich?</a>
-			ist die Entscheidungstabelle.
+			Alles hier ist im Hauptmodul. Nimm, was eine Seite braucht; ignoriere
+			den Rest.
 		</p>
 		<div class="cards">
-			@templates.Card("Der Baum-Walker", "ssg", "Eine Funktion ersetzt handgeschriebene Seiten-Schleifen und verstreute os.MkdirAll-Aufrufe. Seiten bekommen ihren Pfad und ihre Locale überreicht.", c.Link("docs/the-node-tree/"))
-			@templates.Card("Markdown-Inhalte", "content", "TOML-Frontmatter, dekodiert in deinen eigenen Struct. Zeige Generate auf ein Verzeichnis und erhalte eine Seite pro Datei.", c.Link("docs/content-and-collections/"))
-			@templates.Card("Abgeleitete Locales", "BuildLocales", "Ein Locale-Unterbaum wird aus dem Basisbaum generiert. Du listest nur die Seiten, die wirklich anders sind.", c.Link("docs/i18n/"))
-			@templates.Card("Kompiliertes Markup", "x", "Marker erzeugen das HTML und das JavaScript für eine Seite zur Buildzeit — kein WASM, kein Framework, und statisch ohne JavaScript.", c.Link("docs/x/"))
-			@templates.Card("Go im Browser", "wasmwrap", "syscall/js, das sich wie Go anfühlt: query, style, events, fetch und canvas, mit verkettbaren Aufrufen.", c.Link("docs/wasmwrap/"))
-			@templates.Card("Reaktive UI (WASM)", "reactive", "Signale mit automatischer Abhängigkeitsverfolgung, feingranulare DOM-Bindings, keyed lists und ein Router — der volle Go-Weg.", c.Link("docs/reactive/"))
-			@templates.Card("Starter-Vorlagen", "starter", "Siebzehn kopierbare .templ-Dateien — Layouts, Collections, SEO, RSS und die x-Widgets. Kopiert, nie importiert.", c.Link("docs/starter-templates/"))
+			@templates.Card("Der Node-Baum", "ssg", "Eine Funktion ersetzt handgeschriebene Seiten-Schleifen und verstreute os.MkdirAll-Aufrufe. Jede Seite bekommt Pfad und Locale.", c.Link("docs/the-node-tree/"))
+			@templates.Card("Markdown-Inhalte", "content", "TOML- oder JSON-Front-Matter in deine eigene Struct dekodiert, mit Collections und Markdown-Komponenten.", c.Link("docs/content-and-collections/"))
+			@templates.Card("Abgeleitete Locales", "BuildLocales", "Ein Locale-Teilbaum wird aus dem Basisbaum erzeugt. Du listest nur die Seiten, die sich wirklich unterscheiden.", c.Link("docs/i18n/"))
+			@templates.Card("Asset-Sidecars", "assets", "Verknüpfe ein Verzeichnis voller Bilder oder Medien mit Lizenz- und Credit-Metadaten aus meta.json oder meta.toml.", c.Link("docs/quick-reference/#assets"))
+			@templates.Card("Dev-Server", "devserver", "Beobachten, neu bauen, neu laden. Die Schleife, die beim Arbeiten läuft — der Build bleibt außerhalb des Prozesses.", c.Link("docs/dev-server/"))
+			@templates.Card("Starter-Templates", "starter", "Dreizehn kopierbare .templ-Dateien — Layouts, Collections, SEO, RSS und ein wasm-Host. Kopiert, nie importiert.", c.Link("docs/starter-templates/"))
 		</div>
 	</section>
 
+	<section class="static-by-default">
+		<h2>Statisch als Standard</h2>
+		<p>
+			Der Kern von astwerk liefert keine Client-Laufzeit. Eine Seite ohne
+			Skript ist HTML und CSS — dieselbe Ausgabe wie eine handgeschriebene
+			Seite. Wenn eine Seite JavaScript braucht, ist das ein normales
+			<code>&lt;script&gt;</code>-Tag oder ein kompiliertes wasm-Modul;
+			beides sind gewöhnliche Dateien im Baum.
+		</p>
+		<p>
+			Die optionalen Client-Pakete — kompiliertes Markup, Signale, direkter
+			DOM-Zugriff, ein Browser-DOM für Tests — leben im separaten
+			<a href="https://github.com/LukasDerBaum42/astwerk-live">astwerk-live</a>-Projekt.
+			Diese Seite wird gerade stark umgebaut und wird sich sehr
+			wahrscheinlich ändern oder verschwinden; die Seite
+			<a href={ c.Link("docs/which-tool/") }>Client-Werkzeuge</a> in der
+			Dokumentation ist der ehrliche Einstieg.
+		</p>
+	</section>
+
 	<section>
-		<h2>Nicht für dich, wenn…</h2>
+		<h2>Nichts für dich, wenn…</h2>
 		<ul class="plain">
 			<li>Du eine Konfigurationsdatei willst. Go-Struct-Literale sind die Konfiguration.</li>
-			<li>Du Konventionen willst, die deine Inhalte entdecken. Du schreibst den Baum.</li>
-			<li>Du ein virtuelles DOM willst. Bindings patchen jeweils eine Eigenschaft.</li>
-			<li>Du ein Themes-Ökosystem willst. Es gibt einen Ordner mit Dateien, die du kopierst und bearbeitest.</li>
+			<li>Du Konventionen willst, die deine Inhalte finden. Du schreibst den Baum.</li>
+			<li>Du ein Client-Framework im Paket willst. Der Kern hat keine Client-Laufzeit.</li>
+			<li>Du ein Theme-Ökosystem willst. Es gibt einen Ordner mit Dateien zum Kopieren und Bearbeiten.</li>
 		</ul>
 		<p>
 			<a href={ c.Link("docs/comparison/") }>Vollständiger Vergleich mit Hugo, Zola, Eleventy und Astro &rarr;</a>
@@ -111,11 +127,9 @@ templ homeBodyDE(c ssg.Ctx) {
 	<section>
 		<h2>Mach es zu deinem</h2>
 		<p>
-			Dieser Akzent-Umschalter ist live und mit astwerks eigenem
-			<a href={ c.Link("docs/x/") }><code>x</code></a>-Paket gebaut — die
-			Buttons sind kompiliertes Markup, kein handgeschriebenes Skript. Wähle
-			eine Farbe; sie bleibt für den Rest der Seite erhalten.
+			Der Akzent-Umschalter ist reines JavaScript und CSS-Variablen. Wähle
+			eine Farbe, und sie bleibt für den Rest der Seite.
 		</p>
-		@accentPicker()
+		@accentPicker("Akzent", "dein Akzent")
 	</section>
 }

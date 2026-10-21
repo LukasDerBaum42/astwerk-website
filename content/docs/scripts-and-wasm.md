@@ -1,8 +1,8 @@
 +++
 Title = "Scripts & WebAssembly"
 Description = "Compiling Go to wasm as part of the build, with no JS toolchain."
-Order = 130
-Group = "Add interactivity"
+Order = 75
+Group = "Build a site"
 +++
 
 A node with `CompileFrom` compiles a scripts directory into the output. No
@@ -85,11 +85,11 @@ module import.
 <details>
 <summary>Size</summary>
 
-A Go wasm binary starts around 2 MB, and a script using `reactive` lands nearer
-5 MB. That's the Go runtime, and it compresses to roughly a quarter of that over
-the wire. If a page only needs a nav toggle, ten lines of hand-written
-JavaScript is genuinely the better engineering choice. Reach for wasm when the
-logic is substantial enough that writing it in Go pays for the runtime.
+A Go wasm binary starts around 2 MB. That's the Go runtime, and it compresses
+to roughly a quarter of that over the wire. If a page only needs a nav toggle,
+ten lines of hand-written JavaScript is genuinely the better engineering
+choice. Reach for wasm when the logic is substantial enough that writing it in
+Go pays for the runtime.
 
 </details>
 
@@ -100,16 +100,23 @@ logic is substantial enough that writing it in Go pays for the runtime.
 
 package main
 
-import "github.com/LukasDerBaum42/astwerk-live/wasmwrap"
+import "syscall/js"
 
 func main() {
-	wasmwrap.Query("#toggle").On("click", func(e wasmwrap.Event) {
-		e.PreventDefault()
-		wasmwrap.Query("#nav").Class().Toggle("open")
-	})
-	select {}
+	doc := js.Global().Get("document")
+	doc.Call("querySelector", "#toggle").Call("addEventListener", "click",
+		js.FuncOf(func(js.Value, []js.Value) any {
+			doc.Call("querySelector", "#nav").Get("classList").Call("toggle", "open")
+			return nil
+		}))
+	select {} // keep the module alive for the handler
 }
 ```
 
 Dropped in `scripts/` and wired with `CompileFrom`, this builds to
 `scripts/nav.wasm` and is loaded by the component above.
+
+Client-side helpers that make this less verbose — `x`, `reactive`, `wasmwrap`,
+`jsdom` — live in the optional
+[astwerk-live](https://github.com/LukasDerBaum42/astwerk-live) extension. They
+are not part of core astwerk and are still in heavy redesign.

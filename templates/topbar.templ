@@ -8,11 +8,12 @@ import "github.com/LukasDerBaum42/astwerk/ssg"
 templ Topbar(c ssg.Ctx, sidebar bool) {
 	<header class="topbar">
 		<a class="brand" href={ c.Link("") }>
-			<span class="mark">&#9683;</span> astwerk
+			<span class="mark" aria-hidden="true">&#9683;</span>
+			<span>astwerk</span>
+			<span class="brand-core">core</span>
 		</a>
 		<nav class="topnav">
 			<a href={ c.Link("docs/") } aria-current={ ariaCurrent(c.Path, "docs") }>{ label(c, "Docs", "Dokumentation") }</a>
-			<a href={ c.Link("tutorial/") } aria-current={ ariaCurrent(c.Path, "tutorial") }>{ label(c, "Tutorial", "Tutorial") }</a>
 			<a href={ c.Link("examples/") } aria-current={ ariaCurrent(c.Path, "examples") }>{ label(c, "Examples", "Beispiele") }</a>
 			<a href="https://pkg.go.dev/github.com/LukasDerBaum42/astwerk">API</a>
 			<a href="https://github.com/LukasDerBaum42/astwerk">GitHub</a>
@@ -48,6 +49,7 @@ templ Topbar(c ssg.Ctx, sidebar bool) {
 	<script>
 		(() => {
 			const btn = document.getElementById("theme-toggle");
+			if (!btn) return;
 			btn.addEventListener("click", () => {
 				const light = document.documentElement.dataset.theme === "light";
 				if (light) {

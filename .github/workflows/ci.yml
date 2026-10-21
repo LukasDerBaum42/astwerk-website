@@ -36,8 +36,7 @@ jobs:
           fi
 
       # Builds the site and walks every generated page, resolving each link
-      # against the directory it was emitted from. Catches a broken link, an
-      # absolute URL that would break under /astwerk-website/, and demo markup
-      # drifting out of sync with the selectors scripts/demo/ hydrates.
+      # against the directory it was emitted from. Catches a broken link and an
+      # absolute URL that would break under /astwerk-website/.
       - name: Test
         run: go test ./...

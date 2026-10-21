@@ -1,8 +1,9 @@
 +++
 Title = "reactive — templ in the browser"
 Description = "Rendering and hydrating templ components client-side."
-Order = 190
-Group = "Add interactivity"
+Order = 360
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 templ is pure Go, so it compiles to wasm and runs in the browser unchanged —

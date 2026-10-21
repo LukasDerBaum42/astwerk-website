@@ -1,8 +1,9 @@
 +++
 Title = "reactive — routing & async"
 Description = "Client-side routing and loading async data into signals."
-Order = 180
-Group = "Add interactivity"
+Order = 350
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 Two things that reach outside the page: routing between views, and loading data

@@ -11,17 +11,15 @@ Templates are [templ](https://templ.guide) components — real Go, type-checked
 at compile time.
 
 New here? Read [How astwerk thinks](../how-astwerk-thinks/) first — it's the
-whole architecture on one page. For a step-by-step walkthrough, see the
-[Build a site](../../tutorial/) tutorial.
+whole architecture on one page.
 
 ## Requirements
 
 - **Go 1.27 or newer** — the `go` toolchain is the build system.
 - **The templ CLI** — compiles `.templ` files to Go. That's the whole
   toolchain: no Node.js, no bundler, no plugin system.
-- **An evergreen browser** for the interactive paths: `x` needs JavaScript
-  (the page works without it, it just doesn't update), and `reactive` needs a
-  browser that supports WebAssembly.
+- **An evergreen browser** to look at the generated site. Core astwerk
+  outputs plain HTML and CSS; scripts are only present when you add them.
 
 ## Install
 

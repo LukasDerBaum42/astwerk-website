@@ -2,49 +2,48 @@ package home
 
 import (
 	"github.com/LukasDerBaum42/astwerk-website/templates"
-	x "github.com/LukasDerBaum42/astwerk-live/x"
 	"github.com/LukasDerBaum42/astwerk/ssg"
 )
 
 templ Home(c ssg.Ctx) {
-	@templates.Layout(c, "", nil, nil) {
-		@x.Document(homeBody(c), templates.XOptions()...)
+	@templates.Layout(c, "", nil) {
+		@homeBody(c)
+		@homeWidgets()
 	}
 }
 
-// homeBody is the whole page. It is wrapped in one x.Document so the hero's
-// live tree and the accent picker share a single program — one runtime, one
-// set of state declarations, no collisions.
+// homeBody is the whole page. The few interactive bits — the tree toggles and
+// the accent picker — are plain JavaScript, so the page demonstrates that core
+// astwerk needs no client runtime to be useful.
 templ homeBody(c ssg.Ctx) {
 	<section class="hero">
 		<div class="hero-copy">
-			<p class="eyebrow">Static sites, no magic</p>
+			<p class="eyebrow">Go-first static sites</p>
 			<h1>astwerk</h1>
 			<p class="tagline">
-				A Go-first static web framework with an optional client runtime.
-				Pure HTML by default; tiny compiled JavaScript when you need a
-				little interactivity; full Go&nbsp;&rarr;&nbsp;WASM when you need
-				the whole language. No Node, no config, no magic.
+				A static site generator that is just a Go program. Describe the
+				output directory as a tree, call <code>Build</code>, get HTML.
+				No config, no conventions, no client runtime in core.
 			</p>
 			<pre class="install"><code>go get github.com/LukasDerBaum42/astwerk</code></pre>
 			<p class="cta">
-				<a class="button" href={ c.Link("tutorial/") }>Build a site</a>
+				<a class="button" href={ c.Link("docs/getting-started/") }>Get started</a>
 				<a class="button ghost" href={ c.Link("docs/") }>Documentation</a>
-				<a class="button ghost" href={ c.Link("examples/") }>See it running</a>
+				<a class="button ghost" href={ c.Link("examples/") }>Examples</a>
 			</p>
 			<p class="hero-links">
 				<a href={ c.Link("docs/how-astwerk-thinks/") }>How astwerk thinks</a>
 				&middot;
-				<a href={ c.Link("docs/which-tool/") }>Which tool do I use?</a>
+				<a href={ c.Link("docs/quick-reference/") }>Quick reference</a>
 			</p>
 			<ul class="badges">
 				<li>Go 1.27+</li>
 				<li>No Node.js</li>
-				<li>Zero config</li>
+				<li>No config</li>
 				<li>MIT</li>
 			</ul>
 		</div>
-		@heroTree()
+		@heroTree("the tree is the site", "Toggle a node — plain JavaScript, no client runtime.")
 	</section>
 
 	<section class="law">
@@ -68,27 +67,44 @@ templ homeBody(c ssg.Ctx) {
 		<p>
 			That writes <code>build/index.html</code>,
 			<code>build/docs/index.html</code>, copies <code>style/</code> in, and
-			compiles <code>scripts/</code> to WebAssembly.
+			compiles <code>scripts/</code> when a script carries the wasm build
+			constraint.
 		</p>
 	</section>
 
 	<section>
-		<h2>What you get</h2>
+		<h2>Core, in six parts</h2>
 		<p>
-			Everything below is optional and composable — start with the tree
-			walker, add what the site needs. Not sure where a feature belongs?
-			<a href={ c.Link("docs/which-tool/") }>Which tool do I use?</a> is the
-			decision table.
+			Everything below is in the main module. Add what a site needs; ignore
+			what it doesn&rsquo;t.
 		</p>
 		<div class="cards">
-			@templates.Card("The tree walker", "ssg", "One function replaces hand-written page loops and scattered os.MkdirAll calls. Pages get their own path and locale handed to them.", c.Link("docs/the-node-tree/"))
-			@templates.Card("Markdown content", "content", "TOML front matter decoded into your own struct. Point Generate at a directory and get one page per file.", c.Link("docs/content-and-collections/"))
+			@templates.Card("The node tree", "ssg", "One function replaces hand-written page loops and scattered os.MkdirAll calls. Pages get their own path and locale handed to them.", c.Link("docs/the-node-tree/"))
+			@templates.Card("Markdown content", "content", "TOML or JSON front matter decoded into your own struct, with collections and markdown components.", c.Link("docs/content-and-collections/"))
 			@templates.Card("Derived locales", "BuildLocales", "A locale subtree is generated from the base tree. You list only the pages that genuinely differ.", c.Link("docs/i18n/"))
-			@templates.Card("Compiled markup", "x", "Markers generate both the HTML and the JavaScript for a page at build time — no WASM, no framework, and static without JavaScript.", c.Link("docs/x/"))
-			@templates.Card("Go in the browser", "wasmwrap", "syscall/js made to feel like Go: query, style, events, fetch and canvas, with chainable calls.", c.Link("docs/wasmwrap/"))
-			@templates.Card("Reactive UI (WASM)", "reactive", "Signals with automatic dependency tracking, fine-grained DOM bindings, keyed lists and a router — the full-Go path.", c.Link("docs/reactive/"))
-			@templates.Card("Starter templates", "starter", "Seventeen copyable .templ files — layouts, collections, SEO, RSS, and the x widgets. Copied, never imported.", c.Link("docs/starter-templates/"))
+			@templates.Card("Asset sidecars", "assets", "Pair a directory of images or media with licence and credit metadata from meta.json or meta.toml.", c.Link("docs/quick-reference/#assets"))
+			@templates.Card("Dev server", "devserver", "Watch, rebuild, reload. The loop you leave running while you work, with the build kept out of process.", c.Link("docs/dev-server/"))
+			@templates.Card("Starter templates", "starter", "Thirteen copyable .templ files — layouts, collections, SEO, RSS and a wasm host. Copied, never imported.", c.Link("docs/starter-templates/"))
 		</div>
+	</section>
+
+	<section class="static-by-default">
+		<h2>Static by default</h2>
+		<p>
+			Core astwerk ships no client runtime. A page with no script is HTML and
+			CSS — the same output a hand-written site would have. If a site needs
+			JavaScript, that is a normal <code>&lt;script&gt;</code> tag or a
+			compiled wasm module; both are ordinary files in the tree.
+		</p>
+		<p>
+			The optional client-side packages — compiled markup, signals, direct
+			DOM access, a browser DOM for tests — live in the separate
+			<a href="https://github.com/LukasDerBaum42/astwerk-live">astwerk-live</a>
+			extension. That side is still in heavy redesign and is very likely to
+			change or be removed; the
+			<a href={ c.Link("docs/which-tool/") }>client-side tools</a> page in the
+			docs is the honest entry point.
+		</p>
 	</section>
 
 	<section>
@@ -96,7 +112,7 @@ templ homeBody(c ssg.Ctx) {
 		<ul class="plain">
 			<li>You want a config file. Go struct literals are the configuration.</li>
 			<li>You want conventions to discover your content. You write the tree.</li>
-			<li>You want a virtual DOM. Bindings patch one property at a time.</li>
+			<li>You want a client-side framework in the box. Core has no client runtime.</li>
 			<li>You want a themes ecosystem. There is a folder of files you copy and edit.</li>
 		</ul>
 		<p>
@@ -107,44 +123,29 @@ templ homeBody(c ssg.Ctx) {
 	<section>
 		<h2>Make it yours</h2>
 		<p>
-			This accent switcher is live, and it is built with astwerk's own
-			<a href={ c.Link("docs/x/") }><code>x</code></a> package — the buttons
-			are compiled markup, not a hand-written script. Pick a colour and it
-			sticks for the rest of the site.
+			The accent switcher is plain JavaScript and CSS variables. Pick a
+			colour and it sticks for the rest of the site.
 		</p>
-		@accentPicker()
+		@accentPicker("Accent", "your accent")
 	</section>
 }
 
-// heroAbout, heroStyle and heroScripts drive the hero's live tree: which
-// nodes are in the tree, reflected in the output below.
-var (
-	heroAbout   = x.NamedBoolSignal("about", true)
-	heroStyle   = x.NamedBoolSignal("style", true)
-	heroScripts = x.NamedBoolSignal("scripts", true)
-)
-
 // heroTree is the hero's live visual: the tree is the site. Toggle a node and
-// the output tree changes — the same x package every page can use, no WASM.
-templ heroTree() {
+// the output tree changes. This is a plain script — core astwerk has no client
+// runtime to demonstrate.
+templ heroTree(title, note string) {
 	<div class="hero-window">
 		<div class="hero-window-bar">
 			<span class="dot dot-r"></span>
 			<span class="dot dot-y"></span>
 			<span class="dot dot-g"></span>
-			<span class="hero-window-title">the tree is the site</span>
+			<span class="hero-window-title">{ title }</span>
 		</div>
 		<div class="hero-window-body">
 			<div class="chips">
-				@x.El("button", x.On("click", heroAbout.Toggle())) {
-					about
-				}
-				@x.El("button", x.On("click", heroStyle.Toggle())) {
-					style
-				}
-				@x.El("button", x.On("click", heroScripts.Toggle())) {
-					scripts
-				}
+				<button type="button" data-node="about" aria-pressed="true">about</button>
+				<button type="button" data-node="style" aria-pressed="true">style</button>
+				<button type="button" data-node="scripts" aria-pressed="true">scripts</button>
 			</div>
 			<pre class="tree-output" data-hero-tree>build/
 ├── index.html
@@ -152,77 +153,81 @@ templ heroTree() {
 │   └── index.html
 ├── style/
 └── scripts/</pre>
-			@x.Effect() {
-				<script>
-					const render = () => {
-						const items = ["index.html"];
-						if (about.get()) items.push("about/");
-						if (style.get()) items.push("style/");
-						if (scripts.get()) items.push("scripts/");
-						const lines = ["build/"];
-						items.forEach((it, i) => {
-							const last = i === items.length - 1;
-							lines.push((last ? "└── " : "├── ") + it);
-							if (it === "about/") lines.push((last ? "    " : "│   ") + "└── index.html");
-						});
-						return lines.join("\n");
-					};
-					const out = document.querySelector("[data-hero-tree]");
-					if (out) out.textContent = render();
-					document.querySelectorAll(".hero-window .chips button").forEach((b, i) => {
-						const on = [about.get(), style.get(), scripts.get()][i];
-						b.classList.toggle("on", on);
-						b.setAttribute("aria-pressed", String(on));
-					});
-				</script>
-			}
-			<p class="hero-window-note">
-				Live — compiled markup, no WASM. Toggle a node and the output changes.
-			</p>
+			<p class="hero-window-note">{ note }</p>
 		</div>
 	</div>
 }
 
-// homeAccent is the site's chosen accent colour. It is named so the effect
-// script below can read it as `accent.get()`; every page that renders
-// accentPicker() shares the same build-time state.
-var homeAccent = x.NamedStrSignal("accent", "indigo")
-
-// homeAccentLabel derives the picker's live label from the accent signal — a
-// Memo binding the x.Concat combinator, recomputed in the browser on every
-// change, with the build-time value rendered statically for no-JS readers.
-var homeAccentLabel = x.Computed(x.Concat(homeAccent, " — your accent"))
-
-// accentPicker is a live widget: each button sets the signal, and the effect
-// applies the choice to <html data-accent=…> and persists it. The mapping from
-// accent name to CSS variables lives in style/style.css.
-templ accentPicker() {
+// accentPicker is the one appearance control on the page. The buttons carry the
+// accent names; homeWidgets wires them to localStorage and <html data-accent>.
+templ accentPicker(label, suffix string) {
 	<div class="accent-picker">
-		<span class="accent-label">Accent</span>
-		@x.El("button", x.On("click", homeAccent.SetTo("indigo"))) {
-			Indigo
-		}
-		@x.El("button", x.On("click", homeAccent.SetTo("emerald"))) {
-			Emerald
-		}
-		@x.El("button", x.On("click", homeAccent.SetTo("orange"))) {
-			Orange
-		}
-		<p class="accent-current">@homeAccentLabel</p>
-		@x.Effect() {
-			<script>
-				document.documentElement.dataset.accent = accent.get();
-				localStorage.setItem("accent", accent.get());
-			</script>
-		}
-		<script>
-			// The runtime above declared the signal; hydrate it from a saved
-			// preference once, before the effect registers, so reload keeps
-			// the chosen accent instead of the build-time default.
-			const saved = document.documentElement.dataset.accent;
-			if (saved === "emerald" || saved === "orange") accent.set(saved);
-		</script>
+		<span class="accent-label">{ label }</span>
+		<button type="button" data-accent-choice="indigo" aria-pressed="true">Indigo</button>
+		<button type="button" data-accent-choice="emerald" aria-pressed="false">Emerald</button>
+		<button type="button" data-accent-choice="orange" aria-pressed="false">Orange</button>
+		<p class="accent-current">
+			<span data-accent-name>indigo</span> — { suffix }
+		</p>
 	</div>
+}
+
+// homeWidgets wires the tree toggles and the accent picker. It is shared by the
+// English and German home pages; only the surrounding copy is translated.
+templ homeWidgets() {
+	<script>
+		(() => {
+			const state = { about: true, style: true, scripts: true };
+			const out = document.querySelector("[data-hero-tree]");
+			const chips = Array.from(document.querySelectorAll(".hero-window .chips button"));
+
+			const renderTree = () => {
+				if (!out) return;
+				const items = ["index.html"];
+				if (state.about) items.push("about/");
+				if (state.style) items.push("style/");
+				if (state.scripts) items.push("scripts/");
+				const lines = ["build/"];
+				items.forEach((it, i) => {
+					const last = i === items.length - 1;
+					lines.push((last ? "└── " : "├── ") + it);
+					if (it === "about/") lines.push((last ? "    " : "│   ") + "└── index.html");
+				});
+				out.textContent = lines.join("\n");
+			};
+
+			chips.forEach((btn) => {
+				btn.addEventListener("click", () => {
+					const node = btn.dataset.node;
+					state[node] = !state[node];
+					btn.classList.toggle("on", state[node]);
+					btn.setAttribute("aria-pressed", String(state[node]));
+					renderTree();
+				});
+			});
+			renderTree();
+
+			const buttons = Array.from(document.querySelectorAll("[data-accent-choice]"));
+			const name = document.querySelector("[data-accent-name]");
+			const applyAccent = (accent) => {
+				if (accent === "indigo") delete document.documentElement.dataset.accent;
+				else document.documentElement.dataset.accent = accent;
+				localStorage.setItem("accent", accent);
+				buttons.forEach((b) => {
+					const on = b.dataset.accentChoice === accent;
+					b.classList.toggle("on", on);
+					b.setAttribute("aria-pressed", String(on));
+				});
+				if (name) name.textContent = accent;
+			};
+
+			buttons.forEach((btn) => {
+				btn.addEventListener("click", () => applyAccent(btn.dataset.accentChoice));
+			});
+			const saved = localStorage.getItem("accent");
+			applyAccent(["indigo", "emerald", "orange"].includes(saved) ? saved : "indigo");
+		})();
+	</script>
 }
 
 const homeExample = `root := ssg.Node{

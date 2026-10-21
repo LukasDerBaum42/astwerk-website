@@ -1,6 +1,6 @@
 +++
 Title = "How astwerk thinks"
-Description = "One Go program describes the whole output directory as a tree; Build writes it. Interactivity is a choice: tiny compiled JS, or full Go in the browser."
+Description = "One Go program describes the whole output directory as a tree; Build writes it. Static HTML, no client runtime in core."
 Order = 10
 Group = "Introduction"
 +++
@@ -29,28 +29,19 @@ You describe the output directory as a tree of `Node`s and call `Build`. The
 tree is the site — nothing is discovered, nothing is inferred. What you write
 is exactly what gets written.
 
-## Then the client side
+## The client side is your choice
 
-Static HTML is the default, and it stays static until you opt in:
+Core astwerk outputs static HTML. It ships no client runtime, no framework and
+no JavaScript of its own. If a page needs behaviour, that is an ordinary
+`<script>` tag, a `.ts` file handed to `tsc`, or a Go file compiled to WASM by
+[`CompileFrom`](../scripts-and-wasm/) — all of them just files in the tree.
 
-```
-Static HTML
-    │
-    ├── x        → tiny generated JavaScript: a little interactivity
-    │
-    └── reactive → full Go in the browser (via WASM)
-```
-
-- **`x`** compiles a restricted reactive model into a small script at build
-  time. A counter, a toggle, a form, a keyed list — the common 90% — costs a
-  few kilobytes of generated JS and no WASM download.
-- **`reactive`** is the same model running as real Go. When the interactive
-  half of a page *is* a program — goroutines, the standard library, a router —
-  that's the WASM path, with `wasmwrap` underneath as the raw DOM layer.
-
-The two are [two implementations of one reactive model](../x/#documentation):
-same concepts, different runtimes. [Which tool do I use?](../which-tool/) is
-the decision table.
+The optional client-side packages live in the separate
+[astwerk-live](https://github.com/LukasDerBaum42/astwerk-live) extension:
+compiled markup (`x`), signals and bindings (`reactive`), direct DOM access
+(`wasmwrap`) and a browser DOM for tests (`jsdom`). That side is still in heavy
+redesign and very likely to change or be removed. The
+[client-side tools](../which-tool/) page is the honest entry point.
 
 ## The three mechanisms
 
@@ -61,7 +52,7 @@ sitting (full detail on [How it works](../how-it-works/)):
 | --- | --- |
 | The tree walker | `Build` recurses the tree and writes files — depth-first, in sorted key order, reproducibly |
 | Locale derivation | `BuildLocales` mirrors the tree per language; you override only what genuinely differs |
-| Dependency tracking | signals remember what reads them, so bindings update exactly what they own |
+| Content loading | `content` turns markdown and front matter into typed items, ready for `Generate` |
 
 ## What that means for you
 

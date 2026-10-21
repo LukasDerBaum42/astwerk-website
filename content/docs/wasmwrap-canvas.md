@@ -1,8 +1,9 @@
 +++
 Title = "wasmwrap — canvas"
 Description = "Typed 2D drawing — Canvas, Ctx2D, animation loops."
-Order = 150
-Group = "Add interactivity"
+Order = 380
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 The one place `wasmwrap` adds a real API surface: 2D drawing with typed calls

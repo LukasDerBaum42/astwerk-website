@@ -1,5 +1,9 @@
 // Command site builds the astwerk documentation site.
 //
+// The site documents core astwerk: ssg, content, assets, devserver and
+// starter. Client-side packages live in the separate astwerk-live extension and
+// are intentionally not compiled into this site.
+//
 // It depends on a published tag of astwerk, the same way any other consumer
 // does, rather than on a working tree next door. That makes it a check on the
 // release rather than on the branch: if this builds, the API as tagged is
@@ -29,7 +33,6 @@ import (
 	docspages "github.com/LukasDerBaum42/astwerk-website/pages/docs"
 	"github.com/LukasDerBaum42/astwerk-website/pages/examples"
 	"github.com/LukasDerBaum42/astwerk-website/pages/home"
-	"github.com/LukasDerBaum42/astwerk-website/pages/tutorial"
 	"github.com/LukasDerBaum42/astwerk-website/templates"
 	"github.com/LukasDerBaum42/astwerk/content"
 	"github.com/LukasDerBaum42/astwerk/devserver"
@@ -45,6 +48,10 @@ import (
 // DefaultBase is where GitHub project Pages serve this repo from. Override it
 // with -base "" if the site ever moves to a domain root.
 const DefaultBase = "/astwerk-website"
+
+// extensionGroup is the final docs group. Everything in it is optional,
+// client-side, and owned by astwerk-live — not part of core astwerk.
+const extensionGroup = "Extensions (astwerk-live)"
 
 // versionRe matches the astwerk require line in go.mod — the version the docs
 // describe, not a working tree a go.work might redirect to.
@@ -69,6 +76,7 @@ type FrontMatter struct {
 	Description string
 	Order       int
 	Group       string // sidebar section; pages default to one shared group
+	Extension   bool   // part of astwerk-live, not core astwerk
 }
 
 // doc is one loaded documentation page.
@@ -135,12 +143,6 @@ func runServer(outDir, base, addr string) {
 const TemplVersion = "v0.3.1020"
 
 // templCommand is how to run templ generate, preferring an installed binary.
-//
-// `go run github.com/a-h/templ/cmd/templ@version` always works and needs
-// nothing installed, but it costs about three and a half seconds even warm —
-// too slow to sit in a save-and-look loop. The installed binary does the same
-// job in about two tenths of a second, so it is worth looking for, with the
-// go run form kept as the fallback that cannot fail to exist.
 func templCommand() (name string, args []string) {
 	candidates := []string{"templ"}
 	if gobin := os.Getenv("GOBIN"); gobin != "" {
@@ -163,10 +165,6 @@ func templCommand() (name string, args []string) {
 // buildSite generates the site and returns how many pages it wrote. Separated
 // from main so tests can build into a temp directory and inspect the output.
 func buildSite(outDir, base string, dev bool) (int, error) {
-	// Production output ships the compact x runtime; dev keeps it readable. The
-	// pages read the flag through templates.XOptions, so the choice is one place.
-	templates.MinifiedX = !dev
-
 	docs, err := loadDocs("content/docs")
 	if err != nil {
 		return 0, err
@@ -177,6 +175,7 @@ func buildSite(outDir, base string, dev bool) (int, error) {
 		pager = append(pager, templates.NavItem{Label: d.FM.Title, Path: d.Path()})
 		summaries = append(summaries, docspages.DocSummary{
 			Title: d.FM.Title, Description: d.FM.Description, Path: d.Path(),
+			Extension: d.FM.Extension,
 		})
 	}
 	sidebar := groupNav(docs)
@@ -184,7 +183,7 @@ func buildSite(outDir, base string, dev bool) (int, error) {
 	// The site is its own i18n demo: English is the base tree, German is a
 	// BuildLocales subtree whose docs overlay translates the beginner path. The
 	// rest of the de subtree falls back to English behind a banner.
-	deDocs, translated, err := loadDocsMerged("content/docs", "content/de/docs")
+	deDocs, translated, err := loadDocsMerged("content/docs", "content/de/docs", base, "de")
 	if err != nil {
 		return 0, err
 	}
@@ -220,11 +219,9 @@ func buildSite(outDir, base string, dev bool) (int, error) {
 				},
 				Generate: func() map[string]ssg.Node { return docNodes(docs, sidebar, pager) },
 			},
-			"tutorial": tutorialRoot(),
 			"examples": exampleRoot(),
 			"style":    {CopyFrom: "style"},
 			"public":   {CopyFrom: "public"},
-			"scripts":  {CompileFrom: "scripts"},
 		},
 	}
 
@@ -244,7 +241,7 @@ func buildSite(outDir, base string, dev bool) (int, error) {
 	}); err != nil {
 		return 0, err
 	}
-	return len(docs) + len(flattenNav(examples.ExampleNav)) + len(flattenNav(tutorial.TutorialNav)) + 4, nil
+	return len(docs) + len(flattenNav(examples.ExampleNav)) + 4, nil
 }
 
 // deLocales is the German locale: the home page and the docs subtree are
@@ -254,7 +251,7 @@ func deLocales(deDocs []doc, translated map[string]bool) []ssg.Locale {
 	return []ssg.Locale{{
 		Code: "de",
 		Override: map[string]func(ssg.Node) ssg.Node{
-			// The German home page: the same demo, translated.
+			// The German home page: the same page, translated.
 			"": func(n ssg.Node) ssg.Node {
 				n.Title = "astwerk"
 				n.Page = func(c ssg.Ctx) templ.Component { return home.HomeDE(c) }
@@ -271,6 +268,7 @@ func deLocales(deDocs []doc, translated map[string]bool) []ssg.Locale {
 					dePager = append(dePager, templates.NavItem{Label: d.FM.Title, Path: d.Path()})
 					deSummaries = append(deSummaries, docspages.DocSummary{
 						Title: d.FM.Title, Description: d.FM.Description, Path: d.Path(),
+						Extension: d.FM.Extension,
 					})
 				}
 				n.Page = func(c ssg.Ctx) templ.Component {
@@ -285,118 +283,16 @@ func deLocales(deDocs []doc, translated map[string]bool) []ssg.Locale {
 	}}
 }
 
-// exampleRoot builds the examples/ subtree: one page per entry in
-// examples.ExampleNav, in the same order, with prev/next wired from that order —
-// the same pattern navRoot uses for the tutorial and docNodes for the docs.
+// exampleRoot builds the examples/ subtree: the three core examples, in
+// reading order, with prev/next wired from that order.
 func exampleRoot() ssg.Node {
 	renderers := []func(ssg.Ctx, *templates.NavItem, *templates.NavItem) templ.Component{
 		examples.ExampleOverview,
-		examples.ExampleXCounter,
-		examples.ExampleXTodo,
-		examples.ExampleXForms,
-		examples.ExampleXBindings,
-		examples.ExampleXAsync,
-		examples.ExampleXFaq,
-		examples.ExampleXUnderTheHood,
-		examples.ExampleCounter,
-		examples.ExampleList,
-		examples.ExampleForms,
-		examples.ExampleBindings,
-		examples.ExampleAsync,
-		examples.ExampleCanvas,
-		examples.ExampleStopwatch,
-		examples.ExampleFilter,
 		examples.ExampleTemplBasics,
 		examples.ExampleTreeAndContent,
-		examples.ExampleScriptsAndRouting,
-		examples.ExampleWasmwrapAndTempl,
-		examples.ExampleRouterDemo,
-		examples.ExampleBridge,
+		examples.ExampleScripts,
 	}
-
-	root := navRoot("examples", examples.ExampleNav, renderers)
-
-	// The async demo fetches a file the site itself generated — the same three
-	// posts the x-async twin shows, written as data next to the examples pages.
-	root.Files = map[string]ssg.PageFunc{
-		"data/posts.json": jsonFile([]struct {
-			ID    string `json:"id"`
-			Title string `json:"title"`
-		}{
-			{ID: "1", Title: "Signals track their own dependencies"},
-			{ID: "2", Title: "Keyed lists move nodes instead of rebuilding them"},
-			{ID: "3", Title: "Scripts are the escape hatch — this is one"},
-		}),
-	}
-
-	// The router demo owns its own URL, so it is a standalone document — its
-	// own <head>, the wasm loader, no site layout — embedded via iframe from
-	// the Full apps page. It is deliberately not a nav entry: the frame's URL
-	// belongs to the demo, not to the site's navigation.
-	root.Children["router"] = ssg.Node{
-		Title: "Router demo",
-		Page:  func(c ssg.Ctx) templ.Component { return examples.RouterShell(c) },
-	}
-
-	return root
-}
-
-// tutorialRoot builds the tutorial/ subtree: the blog line (an overview and
-// eleven steps, with prev/next wired from the step order) and the clicker
-// line under tutorial/clicker/, its own paged subtree.
-func tutorialRoot() ssg.Node {
-	renderers := []func(ssg.Ctx, *templates.NavItem, *templates.NavItem) templ.Component{
-		tutorial.TutorialOverview,
-		tutorial.TutorialSetup,
-		tutorial.TutorialTree,
-		tutorial.TutorialLayout,
-		tutorial.TutorialPosts,
-		tutorial.TutorialCollection,
-		tutorial.TutorialTags,
-		tutorial.TutorialRss,
-		tutorial.TutorialLocale,
-		tutorial.TutorialInteractivity,
-		tutorial.TutorialDevloop,
-		tutorial.TutorialShipIt,
-	}
-	clickerRenderers := []func(ssg.Ctx, *templates.NavItem, *templates.NavItem) templ.Component{
-		tutorial.TutorialClicker1,
-		tutorial.TutorialClicker2,
-		tutorial.TutorialClicker3,
-		tutorial.TutorialClicker4,
-		tutorial.TutorialClicker5,
-		tutorial.TutorialClicker6,
-		tutorial.TutorialClicker7,
-	}
-
-	root := navRoot("tutorial", tutorial.TutorialNav, renderers)
-
-	// The clicker line: every quest is a child page (the group has no index
-	// of its own — tutorial/clicker/ redirects to quest 1), with prev/next
-	// wired from the line's own order.
-	clickerChildren := make(map[string]ssg.Node, len(clickerRenderers))
-	clickerItems := tutorial.ClickerNav[0].Items
-	for i := range clickerRenderers {
-		render := clickerRenderers[i]
-		var prev, next *templates.NavItem
-		if i > 0 {
-			prev = &clickerItems[i-1]
-		}
-		if i < len(clickerItems)-1 {
-			next = &clickerItems[i+1]
-		}
-		parts := strings.Split(strings.Trim(clickerItems[i].Path, "/"), "/")
-		clickerChildren[parts[len(parts)-1]] = ssg.Node{
-			Title: clickerItems[i].Label,
-			Page:  func(c ssg.Ctx) templ.Component { return render(c, prev, next) },
-		}
-	}
-	root.Children["clicker"] = ssg.Node{
-		Title:    "Cookie Clicker",
-		Page:     func(c ssg.Ctx) templ.Component { return tutorial.ClickerIndex(c) },
-		Children: clickerChildren,
-	}
-	return root
+	return navRoot("examples", examples.ExampleNav, renderers)
 }
 
 // navRoot builds a paged subtree from a sidebar: one page per entry after the
@@ -440,7 +336,7 @@ func navRoot(section string, nav []templates.NavGroup, renderers []func(ssg.Ctx,
 }
 
 // flattenNav flattens a grouped sidebar into reading order, for wiring a
-// previous/next pager the same way docNodes does for docs.
+// previous/next pager.
 func flattenNav(groups []templates.NavGroup) []templates.NavItem {
 	var out []templates.NavItem
 	for _, g := range groups {
@@ -468,7 +364,7 @@ func docNodes(docs []doc, sidebar []templates.NavGroup, pager []templates.NavIte
 		out[d.Slug] = ssg.Node{
 			Title: d.FM.Title,
 			Page: func(c ssg.Ctx) templ.Component {
-				return docspages.DocPage(c, sidebar, desc, body, prev, next)
+				return docspages.DocPage(c, sidebar, desc, body, d.FM.Extension, prev, next)
 			},
 		}
 	}
@@ -488,6 +384,9 @@ func groupNav(docs []doc) []templates.NavGroup {
 			i = len(groups)
 			index[d.FM.Group] = i
 			groups = append(groups, templates.NavGroup{Title: d.FM.Group})
+			if d.FM.Group == extensionGroup {
+				groups[i].Note = "Optional, still in heavy redesign — likely to change or be removed."
+			}
 		}
 		groups[i].Items = append(groups[i].Items, templates.NavItem{Label: d.FM.Title, Path: d.Path(), Sub: d.Subs})
 	}
@@ -499,8 +398,7 @@ var tagRe = regexp.MustCompile(`<[^>]+>`)
 
 // withHeadingAnchors gives every h2/h3 in html an id (goldmark doesn't add
 // one on its own) and collects them as sidebar subsections — h2s top-level,
-// h3s nested under them. The h3s are the API names a docs page is organised
-// by, so listing them keeps "on this page" useful.
+// h3s nested under them.
 func withHeadingAnchors(html string) (string, []templates.SubItem) {
 	var subs []templates.SubItem
 	seen := map[string]int{}
@@ -544,14 +442,17 @@ func slugify(s string) string {
 
 // loadDocs reads the docs directory and returns pages in sidebar order.
 func loadDocs(dir string) ([]doc, error) {
-	docs, _, err := loadDocsMerged(dir, "")
+	docs, _, err := loadDocsMerged(dir, "", "", "")
 	return docs, err
 }
 
 // loadDocsMerged reads dir as a Collection, overlaying translated pages from
 // overlayDir when a slug exists in both. The returned set names the slugs that
 // came from the overlay — the pages that are actually translated.
-func loadDocsMerged(dir, overlayDir string) ([]doc, map[string]bool, error) {
+//
+// locale selects the Ctx the body is rendered with, so relative URLs resolve
+// from the right depth in the base tree and under /de/.
+func loadDocsMerged(dir, overlayDir, base, locale string) ([]doc, map[string]bool, error) {
 	loader := content.NewLoader(markdown())
 	docs, err := content.LoadCollectionWith[FrontMatter](loader, dir)
 	if err != nil {
@@ -561,13 +462,14 @@ func loadDocsMerged(dir, overlayDir string) ([]doc, map[string]bool, error) {
 		return nil, nil, fmt.Errorf("no markdown found in %s", dir)
 	}
 
+	overlay := map[string]content.Page{}
 	translated := map[string]bool{}
 	if overlayDir != "" {
 		// The German overlay is the documented escape hatch, worked: load the
 		// translated pages by hand with LoadDir and replace an item by slug —
 		// the same shape as content-and-collections' "one odd item can still be
 		// built by hand and merged" line.
-		overlay, err := loader.LoadDir(overlayDir)
+		overlay, err = loader.LoadDir(overlayDir)
 		if err != nil {
 			return nil, nil, fmt.Errorf("reading %s: %w", overlayDir, err)
 		}
@@ -579,11 +481,10 @@ func loadDocsMerged(dir, overlayDir string) ([]doc, map[string]bool, error) {
 			for i := range docs.Items {
 				if docs.Items[i].Slug == slug {
 					docs.Items[i].Meta = meta
-					docs.Items[i].HTML = p.HTML
+					translated[slug] = true
 					break
 				}
 			}
-			translated[slug] = true
 		}
 	}
 
@@ -592,7 +493,17 @@ func loadDocsMerged(dir, overlayDir string) ([]doc, map[string]bool, error) {
 		if it.Meta.Title == "" {
 			return nil, nil, fmt.Errorf("%s/%s.md has no Title in its front matter", dir, it.Slug)
 		}
-		html, subs := withHeadingAnchors(it.HTML)
+
+		ctx := docCtx(it.Meta.Title, it.Slug, base, locale)
+		body := it.Content(ctx)
+		if p, ok := overlay[it.Slug]; ok {
+			body = p.Render(ctx)
+		}
+		html, err := renderComponent(body)
+		if err != nil {
+			return nil, nil, fmt.Errorf("rendering %s/%s.md: %w", dir, it.Slug, err)
+		}
+		html, subs := withHeadingAnchors(html)
 		out = append(out, doc{Slug: it.Slug, FM: it.Meta, HTML: html, Subs: subs})
 	}
 
@@ -605,6 +516,31 @@ func loadDocsMerged(dir, overlayDir string) ([]doc, map[string]bool, error) {
 		}
 	}
 	return out, translated, nil
+}
+
+// docCtx is the context a markdown body is rendered with. It mirrors the ctx
+// Build will hand the page, so root-relative URLs in markdown resolve to the
+// same place when the body is rendered eagerly here.
+func docCtx(title, slug, base, locale string) ssg.Ctx {
+	c := ssg.Ctx{Title: title, Base: base, Relative: true}
+	if locale != "" {
+		c.Locale = locale
+		c.Prefix = "/" + locale
+		c.Path = locale + "/docs/" + slug + "/"
+	} else {
+		c.Path = "docs/" + slug + "/"
+	}
+	return c
+}
+
+// renderComponent renders a component to a string. Docs bodies are needed as
+// HTML before the tree is walked, for heading anchors and the sidebar.
+func renderComponent(c templ.Component) (string, error) {
+	var b strings.Builder
+	if err := c.Render(context.Background(), &b); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 // Path is the doc's site path, matching where the tree puts it.
@@ -620,7 +556,7 @@ func markdown() goldmark.Markdown {
 			highlighting.NewHighlighting(
 				highlighting.WithStyle(templates.StyleName),
 				// Classes, not inline styles, so style/code.css drives both these
-				// blocks and the ones views.HighlightGo emits.
+				// blocks and the ones templates.CodeBlock emits.
 				highlighting.WithFormatOptions(chromahtml.WithClasses(true)),
 			),
 		),
@@ -637,9 +573,9 @@ type searchEntry struct {
 }
 
 // searchEntries gathers every page the site generates: docs with their
-// descriptions and headings, tutorial and example steps by title.
+// descriptions and headings, examples by title.
 func searchEntries(docs []doc) []searchEntry {
-	entries := []searchEntry{{Path: "", Title: "astwerk", Description: "A Go-first static web framework with an optional client runtime."}}
+	entries := []searchEntry{{Path: "", Title: "astwerk", Description: "A Go-first static site generator with no client runtime in core."}}
 	for _, d := range docs {
 		var headings []string
 		for _, s := range d.Subs {
@@ -649,16 +585,6 @@ func searchEntries(docs []doc) []searchEntry {
 			Path: d.Path(), Title: d.FM.Title, Description: d.FM.Description,
 			Headings: strings.Join(headings, " "),
 		})
-	}
-	for _, g := range tutorial.TutorialNav {
-		for _, it := range g.Items {
-			entries = append(entries, searchEntry{Path: it.Path, Title: it.Label})
-		}
-	}
-	for _, g := range tutorial.ClickerNav {
-		for _, it := range g.Items {
-			entries = append(entries, searchEntry{Path: it.Path, Title: it.Label})
-		}
 	}
 	for _, g := range examples.ExampleNav {
 		for _, it := range g.Items {
@@ -673,16 +599,6 @@ func sitemapXML(origin string, docs []doc) string {
 	paths := []string{""}
 	for _, d := range docs {
 		paths = append(paths, d.Path())
-	}
-	for _, g := range tutorial.TutorialNav {
-		for _, it := range g.Items {
-			paths = append(paths, it.Path)
-		}
-	}
-	for _, g := range tutorial.ClickerNav {
-		for _, it := range g.Items {
-			paths = append(paths, it.Path)
-		}
 	}
 	for _, g := range examples.ExampleNav {
 		for _, it := range g.Items {

@@ -1,8 +1,9 @@
 +++
 Title = "wasmwrap"
 Description = "syscall/js made to feel like Go: DOM, style, events, fetch."
-Order = 140
-Group = "Add interactivity"
+Order = 370
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 `syscall/js` works, but every call is a stringly-typed `js.Value.Call` and

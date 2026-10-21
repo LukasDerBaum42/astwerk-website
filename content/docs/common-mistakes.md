@@ -63,9 +63,8 @@ Generated keys win — silently. If a `Generate` returns a key that also exists
 in `Children`, the generated node replaces the hand-written one. Name them
 deliberately, and test the output.
 
-## Expect the WASM floor to be per-widget
+## Assume a page ships JavaScript
 
-The ~2 MB Go runtime is per binary, not per widget. One `.wasm` per site
-(sharing the runtime) is far cheaper than one per interactive region. If a
-page needs only a counter and a toggle, that's `x`'s job — reach for WASM when
-the interactive half is a program.
+Core astwerk outputs HTML and CSS. A page has JavaScript only when you add a
+`<script>` tag or a `CompileFrom` node. If a generated page contains a script
+you did not write, look for a template or component that injected it.

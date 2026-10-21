@@ -1,8 +1,9 @@
 +++
 Title = "reactive — state"
 Description = "Signals, effects, computed values and ownership — the state model behind the bindings."
-Order = 160
-Group = "Add interactivity"
+Order = 330
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 `reactive` is opt-in state management on top of `wasmwrap`, fine-grained rather

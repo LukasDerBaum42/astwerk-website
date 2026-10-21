@@ -1,6 +1,6 @@
 +++
 Title = "Wie astwerk denkt"
-Description = "Ein Go-Programm beschreibt das ganze Ausgabeverzeichnis als Baum; Build schreibt es. Interaktivität ist eine Wahl: winziges kompiliertes JavaScript oder volles Go im Browser."
+Description = "Ein Go-Programm beschreibt das ganze Ausgabeverzeichnis als Baum; Build schreibt es. Statisches HTML, keine Client-Laufzeit im Kern."
 Order = 10
 Group = "Introduction"
 +++
@@ -29,31 +29,22 @@ Du beschreibst das Ausgabeverzeichnis als einen Baum aus `Node`s und rufst
 `Build` auf. Der Baum ist die Seite — nichts wird entdeckt, nichts wird
 abgeleitet. Was du schreibst, ist genau das, was geschrieben wird.
 
-## Und dann die Client-Seite
+## Die Client-Seite ist deine Wahl
 
-Statisches HTML ist der Standard und bleibt statisch, bis du dich aktiv
-dafür entscheidest:
+Der Kern von astwerk gibt statisches HTML aus. Er liefert keine
+Client-Laufzeit, kein Framework und kein eigenes JavaScript. Wenn eine Seite
+Verhalten braucht, ist das ein normales `<script>`-Tag, eine `.ts`-Datei, die
+`CompileScripts` an `tsc` gibt, oder eine Go-Datei, die
+[`CompileFrom`](../scripts-and-wasm/) zu WASM kompiliert — alles gewöhnliche
+Dateien im Baum.
 
-```
-Statisches HTML
-    │
-    ├── x        → winziges generiertes JavaScript: ein bisschen Interaktivität
-    │
-    └── reactive → volles Go im Browser (über WASM)
-```
-
-- **`x`** kompiliert ein eingeschränktes reaktives Modell zur Buildzeit in ein
-  kleines Skript. Ein Zähler, ein Umschalter, ein Formular, eine keyed list —
-  die üblichen 90 % — kosten ein paar Kilobyte generiertes JavaScript und
-  keinen WASM-Download.
-- **`reactive`** ist dasselbe Modell als echtes Go. Wenn die interaktive Hälfte
-  einer Seite *ein Programm* ist — Goroutinen, die Standardbibliothek, ein
-  Router —, dann ist das der WASM-Weg, mit `wasmwrap` darunter als roher
-  DOM-Layer.
-
-Die beiden sind [zwei Implementierungen eines reaktiven Modells](../x/):
-gleiche Konzepte, andere Laufzeit. [Welches Werkzeug brauche ich?](../which-tool/)
-ist die Entscheidungstabelle.
+Die optionalen Client-Pakete leben im separaten
+[astwerk-live](https://github.com/LukasDerBaum42/astwerk-live)-Projekt:
+kompiliertes Markup (`x`), Signale und Bindings (`reactive`), direkter
+DOM-Zugriff (`wasmwrap`) und ein Browser-DOM für Tests (`jsdom`). Diese Seite
+wird gerade stark umgebaut und wird sich sehr wahrscheinlich ändern oder
+verschwinden. Die Seite [Client-Werkzeuge](../which-tool/) ist der ehrliche
+Einstieg.
 
 ## Die drei Mechanismen
 
@@ -64,7 +55,7 @@ Sitzung lesbar (ausführlich auf [How it works](../how-it-works/)):
 | --- | --- |
 | Der Baum-Walker | `Build` durchläuft den Baum rekursiv und schreibt Dateien — depth-first, in sortierter Schlüsselreihenfolge, reproduzierbar |
 | Locale-Ableitung | `BuildLocales` spiegelt den Baum pro Sprache; du überschreibst nur, was wirklich anders ist |
-| Abhängigkeitsverfolgung | Signale merken sich, wer sie liest, sodass Bindings genau das aktualisieren, was ihnen gehört |
+| Content-Laden | `content` macht aus Markdown und Front Matter typisierte Items für `Generate` |
 
 ## Was das für dich bedeutet
 

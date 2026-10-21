@@ -1,8 +1,9 @@
 +++
 Title = "reactive — DOM bindings"
 Description = "Fine-grained bindings: text, attributes, classes, forms, conditional and keyed subtrees."
-Order = 170
-Group = "Add interactivity"
+Order = 340
+Group = "Extensions (astwerk-live)"
+Extension = true
 +++
 
 Bindings attach behaviour to elements. Each one is a one-liner over
