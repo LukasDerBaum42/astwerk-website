@@ -1,0 +1,63 @@
+package templates
+
+import "github.com/LukasDerBaum42/astwerk/ssg"
+
+// Topbar owns the site header: brand, top navigation, the language switcher,
+// the search box, the docs-menu button and the theme toggle — plus the theme
+// script, which only this component's button needs.
+templ Topbar(c ssg.Ctx, sidebar bool) {
+	<header class="topbar">
+		<a class="brand" href={ c.Link("") }>
+			<span class="mark">&#9683;</span> astwerk
+		</a>
+		<nav class="topnav">
+			<a href={ c.Link("docs/") } aria-current={ ariaCurrent(c.Path, "docs") }>{ label(c, "Docs", "Dokumentation") }</a>
+			<a href={ c.Link("tutorial/") } aria-current={ ariaCurrent(c.Path, "tutorial") }>{ label(c, "Tutorial", "Tutorial") }</a>
+			<a href={ c.Link("examples/") } aria-current={ ariaCurrent(c.Path, "examples") }>{ label(c, "Examples", "Beispiele") }</a>
+			<a href="https://pkg.go.dev/github.com/LukasDerBaum42/astwerk">API</a>
+			<a href="https://github.com/LukasDerBaum42/astwerk">GitHub</a>
+			<select class="lang" id="lang-select" aria-label={ label(c, "Language", "Sprache") }>
+				<option value={ c.InLocale("") } selected?={ c.Locale == "" }>English</option>
+				<option value={ c.InLocale("/de") } selected?={ c.Locale == "de" }>Deutsch</option>
+			</select>
+			<div class="search">
+				<input
+					type="search"
+					id="site-search"
+					placeholder={ label(c, "Search…", "Suchen…") }
+					aria-label={ label(c, "Search", "Suchen") }
+					data-index={ c.Asset("search/index.json") }
+					data-prefix={ searchPrefix(c) }
+					autocomplete="off"
+				/>
+				<div class="search-results" id="search-results" hidden></div>
+			</div>
+			if sidebar {
+				<button class="docs-menu" id="docs-menu" type="button" aria-expanded="false" aria-controls="sidebar">
+					{ label(c, "Menu", "Menü") }
+				</button>
+			}
+			<button
+				class="theme-toggle"
+				id="theme-toggle"
+				type="button"
+				aria-label={ label(c, "Toggle light and dark theme", "Zwischen hellem und dunklem Design wechseln") }
+			></button>
+		</nav>
+	</header>
+	<script>
+		(() => {
+			const btn = document.getElementById("theme-toggle");
+			btn.addEventListener("click", () => {
+				const light = document.documentElement.dataset.theme === "light";
+				if (light) {
+					delete document.documentElement.dataset.theme;
+					localStorage.setItem("theme", "dark");
+				} else {
+					document.documentElement.dataset.theme = "light";
+					localStorage.setItem("theme", "light");
+				}
+			});
+		})();
+	</script>
+}

@@ -1,0 +1,22 @@
+package templates
+
+import "github.com/LukasDerBaum42/astwerk/ssg"
+
+// Footer owns the page footer: the license line and the version line. Nothing
+// else on the page needs it, so it composes into Layout like any other piece
+// of the shell.
+templ Footer(c ssg.Ctx) {
+	<footer class="footer">
+		<p>
+			{ label(c, "astwerk is MIT licensed. This site is built with astwerk —", "astwerk ist MIT-lizenziert. Diese Seite ist mit astwerk gebaut —") }
+			<a href="https://github.com/LukasDerBaum42/astwerk-website">
+				{ label(c, "its own source", "ihre eigene Quelle") }
+			</a>
+			{ label(c, "is in the repo.", "ist im Repository.") }
+		</p>
+		<p class="version">
+			{ label(c, "Docs for astwerk", "Dokumentation für astwerk") }
+			<a href="https://github.com/LukasDerBaum42/astwerk/releases">v{ Version }</a>
+		</p>
+	</footer>
+}

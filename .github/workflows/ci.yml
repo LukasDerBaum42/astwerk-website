@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: '1.27'
           cache-dependency-path: go.sum
 
       - name: Check generated templ is current
@@ -38,6 +38,6 @@ jobs:
       # Builds the site and walks every generated page, resolving each link
       # against the directory it was emitted from. Catches a broken link, an
       # absolute URL that would break under /astwerk-website/, and demo markup
-      # drifting out of sync with the selectors scripts/demo.go hydrates.
+      # drifting out of sync with the selectors scripts/demo/ hydrates.
       - name: Test
         run: go test ./...

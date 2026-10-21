@@ -1,7 +1,7 @@
 +++
 Title = "How it works"
 Description = "The walker, locale derivation, and dependency tracking — the three mechanisms, in full."
-Order = 90
+Order = 230
 Group = "Reference"
 +++
 

@@ -1,0 +1,217 @@
+package tutorial
+
+import "strings"
+
+// The tutorial's visual system: every diagram is a templ component rendered at
+// build time — SVG, CSS and box-drawing characters, no JavaScript library. Each
+// component has a mobile variant (side-by-side becomes stacked, pipelines go
+// vertical).
+
+// Stage is one step of a pipeline diagram.
+type Stage struct {
+	Name string
+	Sub  string
+}
+
+// pipelineDiagram draws a process as a horizontal strip of stages; on mobile
+// the strip stacks vertically.
+templ pipelineDiagram(stages []Stage) {
+	<div class="pipeline">
+		for i, s := range stages {
+			if i > 0 {
+				<span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
+			}
+			<div class="pipeline-stage">
+				<span class="pipeline-name">{ s.Name }</span>
+				if s.Sub != "" {
+					<span class="pipeline-sub">{ s.Sub }</span>
+				}
+			</div>
+		}
+	</div>
+}
+
+// overviewPipeline is the overview's four-stage arc with data-stage marks —
+// the shell lights each stage as the quests behind it complete
+// (08-reactive-pages.md). The mapping is the content pass's table, kept in
+// the shell next to the stage bindings.
+templ overviewPipeline() {
+	<div class="pipeline" data-pipeline>
+		<div class="pipeline-stage" data-stage="go">
+			<span class="pipeline-name">Go program</span>
+			<span class="pipeline-sub">the tree, pages, content</span>
+		</div>
+		<span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
+		<div class="pipeline-stage" data-stage="templ">
+			<span class="pipeline-name">templ generate</span>
+			<span class="pipeline-sub">compiles .templ to Go</span>
+		</div>
+		<span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
+		<div class="pipeline-stage" data-stage="build">
+			<span class="pipeline-name">Build</span>
+			<span class="pipeline-sub">walks the tree, writes files</span>
+		</div>
+		<span class="pipeline-arrow" aria-hidden="true">&rarr;</span>
+		<div class="pipeline-stage" data-stage="static">
+			<span class="pipeline-name">static site</span>
+			<span class="pipeline-sub">HTML, CSS, a little JS</span>
+		</div>
+	</div>
+}
+
+// terminal renders a fake terminal window around its lines.
+templ terminal(lines ...string) {
+	<div class="terminal">
+		<div class="terminal-bar">
+			<span class="dot dot-r"></span>
+			<span class="dot dot-y"></span>
+			<span class="dot dot-g"></span>
+			<span class="terminal-title">terminal</span>
+		</div>
+		<pre><code>{ strings.Join(lines, "\n") }</code></pre>
+	</div>
+}
+
+// browserFrame renders a mini browser window around children — the "generated
+// result" view.
+templ browserFrame(title string) {
+	<div class="browser">
+		<div class="browser-bar">
+			<span class="dot dot-r"></span>
+			<span class="dot dot-y"></span>
+			<span class="dot dot-g"></span>
+			<span class="browser-url">{ title }</span>
+		</div>
+		<div class="browser-body">
+			{ children... }
+		</div>
+	</div>
+}
+
+// treeFile is one file in a project-explorer tree; New marks it as added in
+// the current step.
+type treeFile struct {
+	Name string
+	New  bool
+}
+
+// treeDir is one directory in a project-explorer tree.
+type treeDir struct {
+	Name  string
+	Files []treeFile
+	Dirs  []treeDir
+}
+
+// explorerPair is one step's before/after picture: the source tree and the
+// build-output tree, with the step's additions flagged.
+type explorerPair struct {
+	src treeDir
+	out treeDir
+}
+
+// pair builds a step's explorer pair from flat path lists.
+func pair(srcRoot string, src, srcNew []string, outRoot string, out, outNew []string) explorerPair {
+	return explorerPair{
+		src: buildExplorer(srcRoot, src, srcNew),
+		out: buildExplorer(outRoot, out, outNew),
+	}
+}
+
+// buildExplorer turns a flat list of "dir/file" paths into a nested tree,
+// flagging the entries named in newPaths as added in the current step.
+func buildExplorer(root string, paths, newPaths []string) treeDir {
+	isNew := make(map[string]bool, len(newPaths))
+	for _, p := range newPaths {
+		isNew[p] = true
+	}
+	d := treeDir{Name: root}
+	for _, p := range paths {
+		d = insertPath(d, strings.Split(p, "/"), isNew[p])
+	}
+	return d
+}
+
+// insertPath inserts one path into the tree, creating directories as needed.
+func insertPath(d treeDir, parts []string, new bool) treeDir {
+	if len(parts) == 1 {
+		d.Files = append(d.Files, treeFile{Name: parts[0], New: new})
+		return d
+	}
+	for i := range d.Dirs {
+		if d.Dirs[i].Name == parts[0] {
+			d.Dirs[i] = insertPath(d.Dirs[i], parts[1:], new)
+			return d
+		}
+	}
+	d.Dirs = append(d.Dirs, insertPath(treeDir{Name: parts[0]}, parts[1:], new))
+	return d
+}
+
+// projectExplorer shows the site's two trees side by side — your source and
+// the build output — with this step's additions highlighted. On mobile the
+// two trees stack.
+templ projectExplorer(p explorerPair) {
+	<div class="explorer">
+		<div class="explorer-tree">
+			<p class="explorer-title">your source</p>
+			<ul class="tree">
+				@treeDirNode(p.src)
+			</ul>
+		</div>
+		<div class="explorer-tree">
+			<p class="explorer-title">the build</p>
+			<ul class="tree">
+				@treeDirNode(p.out)
+			</ul>
+		</div>
+	</div>
+}
+
+templ treeDirNode(d treeDir) {
+	<li>
+		<span class="dir">{ d.Name }/</span>
+		<ul>
+			for _, f := range d.Files {
+				<li>
+					<span class={ fileClass(f.New) }>{ f.Name }</span>
+					if f.New {
+						<span class="tree-new" aria-hidden="true">+</span>
+					}
+				</li>
+			}
+			for _, sub := range d.Dirs {
+				@treeDirNode(sub)
+			}
+		</ul>
+	</li>
+}
+
+func fileClass(new bool) string {
+	if new {
+		return "new"
+	}
+	return ""
+}
+
+// mappingDiagram draws a derivation: two trees with an arrow between them, for
+// "the locale subtree is derived from the base tree, not written twice".
+templ mappingDiagram(from, to treeDir, note string) {
+	<div class="mapping">
+		<div class="mapping-side">
+			<ul class="tree">
+				@treeDirNode(from)
+			</ul>
+		</div>
+		<div class="mapping-arrow" aria-hidden="true">
+			<span>&rarr;</span>
+		</div>
+		<div class="mapping-side">
+			<ul class="tree">
+				@treeDirNode(to)
+			</ul>
+			if note != "" {
+				<p class="mapping-note">{ note }</p>
+			}
+		</div>
+	</div>
+}

@@ -1,8 +1,8 @@
 +++
 Title = "reactive — routing & async"
 Description = "Client-side routing and loading async data into signals."
-Order = 62
-Group = "Client-side"
+Order = 180
+Group = "Add interactivity"
 +++
 
 Two things that reach outside the page: routing between views, and loading data
@@ -78,20 +78,27 @@ signals:
 type Resource[T any] struct {
 	Data    *Signal[T]    // the loaded value, or T's zero value before the first success
 	Err     *Signal[error] // the last error, cleared when a load succeeds
-	Loading *Signal[bool]  // true while a load is in flight
+	Loading *BoolSignal   // true while a load is in flight
 }
 ```
 
 ```go
-reactive.BindShow(spinner, posts.Loading.Get)
-reactive.BindList(list, posts.Data.Get, postID, renderPost)
-reactive.BindText(errBox, func() string {
+reactive.BindShow(spinner, posts.Loading)
+reactive.BindText(errBox, reactive.Computed(func() string {
 	if err := posts.Err.Get(); err != nil {
 		return err.Error()
 	}
 	return ""
-})
+}))
 ```
+
+`Data` is a plain `Signal[[]T]` — the generic kind, because `T` here is
+whatever the endpoint returns — while `BindList` needs a `*ListSignal[T]`. A
+loaded list therefore renders through [`BindTempl`](../reactive-templ/), which
+replaces the whole list on load: the honest trade-off for a display-only chunk.
+When rows must be keyed, feed a `ListSignal` from the loader instead — the
+loader returns the slice and an effect (or the view) copies it into the list
+signal, keeping the keyed-row behaviour.
 
 `Reload` re-runs the loader. The loader runs on its own goroutine, so a
 blocking `Fetch` belongs there.

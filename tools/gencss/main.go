@@ -21,10 +21,13 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 )
 
-// The light style must match templates.StyleName, which the formatter uses for
-// snippets embedded in templ.
+// The dark style must match templates.StyleName for consistency; the light
+// style is chosen for hue separation — github's own light palette puts tags,
+// strings and operators all in the same dark-blue family, which reads as
+// "same colour" on a light background. pastie keeps every token family a
+// distinct hue.
 const (
-	light = "github"
+	light = "pastie"
 	dark  = "github-dark"
 )
 
@@ -54,6 +57,11 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Fprintf(out, "\n/* %s */\n%s\n", light, indent(scope(lightCSS, `[data-theme="light"]`)))
+	// Some light styles (pastie) define no PreWrapper foreground, so the unscoped
+	// dark rule's near-white would leak into light mode — white code on a white
+	// page. Pin a dark base foreground for the light block; the token rules on
+	// top of it keep their own colours.
+	fmt.Fprintf(out, "\n/* light base foreground */\n[data-theme=\"light\"] .chroma { color: #1f2328; }\n")
 }
 
 // scope prefixes every selector in css with prefix, so each rule applies only

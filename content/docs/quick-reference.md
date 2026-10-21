@@ -1,7 +1,7 @@
 +++
 Title = "Quick reference"
 Description = "The whole API on one page — signatures and copyable snippets, man-page style."
-Order = 95
+Order = 200
 Group = "Reference"
 +++
 
@@ -161,7 +161,25 @@ Tags = ["game", "go"]
 Body here.
 ```
 
-Collection (index + one page per file):
+Collection (index + one page per file), the shortcut — load, chain, generate:
+
+```go
+posts, _ := content.LoadCollection[Post]("content/posts") // sorted by slug
+
+latest := posts.Filter(func(it content.Item[Post]) bool {
+	return !it.Meta.Draft
+}).Sort(func(a, b content.Item[Post]) bool {
+	return a.Meta.Date.After(b.Meta.Date)
+})
+
+"blog": {Generate: func() map[string]ssg.Node {
+	return latest.Nodes(func(c ssg.Ctx, it content.Item[Post]) templ.Component {
+		return views.Post(c, it)
+	})
+}},
+```
+
+…and what it does under the hood, if you need to deviate:
 
 ```go
 func projects() ssg.Node {
@@ -234,7 +252,7 @@ See [Scripts & WebAssembly](../scripts-and-wasm/).
 
 package main
 
-import "github.com/LukasDerBaum42/astwerk/wasmwrap"
+import "github.com/LukasDerBaum42/astwerk-live/wasmwrap"
 
 func main() {
 	wasmwrap.Query("#toggle").On("click", func(e wasmwrap.Event) {
@@ -266,8 +284,8 @@ templ WasmScript(c ssg.Ctx, name string) {
 See [x](../x/) and [x — structure & scripts](../x-structure/).
 
 ```go
-var count = x.Named("count", 0) // named, so scripts can read it
-var open  = x.NewSignal(false)
+var count = x.NamedNumSignal("count", 0) // named, so scripts can read it
+var open  = x.NewBoolSignal(false)
 ```
 
 ```templ
@@ -275,14 +293,14 @@ var open  = x.NewSignal(false)
 
 templ counter() {
 	<div>
-		@x.Text(count)
-		@x.El("button", x.On("click", count.Set(count.Add(1)))) {
+		@count
+		@x.El("button", x.On("click", count.Inc(1))) {
 			+
 		}
-		@x.El("button", x.On("click", count.Set(x.Lit(0)))) {
+		@x.El("button", x.On("click", count.SetTo(0))) {
 			reset
 		}
-		@x.El("button", x.On("click", open.Set(x.Not(open)))) {
+		@x.El("button", x.On("click", open.Toggle())) {
 			toggle
 		}
 		@x.When(open, secret())
@@ -303,9 +321,9 @@ Bindings:
 Forms and computed values:
 
 ```go
-var price = x.NewSignal(10.0)
-var qty   = x.NewSignal(2.0)
-var total = x.Computed(price.Mul(qty))
+var price = x.NewNumSignal(10.0)
+var qty   = x.NewNumSignal(2.0)
+var total = x.Computed(x.Mul(price, qty))
 ```
 
 ```templ
@@ -328,8 +346,10 @@ Structure and effects:
 }
 ```
 
-Combinators: `Add`, `Sub`, `Mul`, `Div`, `Lit`, `Not`. Anything else is a
-`<script>` reading the named signals — that is the escape hatch.
+Actions: `Set`, `SetTo`, `Inc`, `Dec`, `Toggle`; expressions: `Add`, `Sub`,
+`Mul`, `Div`, `Concat`, `Gt`/`Lt`/`Gte`/`Lte`/`Eq`/`Ne`, `Not`, `Lit`;
+composition: `Seq`, `If`. Anything else is a `<script>` reading the named
+signals — that is the escape hatch.
 
 ## wasmwrap
 
@@ -362,13 +382,13 @@ See [reactive — state](../reactive/), [DOM bindings](../reactive-bindings/),
 [templ in the browser](../reactive-templ/).
 
 ```go
-count := reactive.NewSignal(0)
+count := reactive.Num(0)          // split types: Num, Bool, Str, List
 count.Get(); count.Peek(); count.Set(5)
-count.Update(func(v int) int { return v + 1 })
-count.Subscribe(fn)                          // manual subscription
+count.Inc(1); count.Dec(1)        // the one-word forms
+count.Subscribe(fn)               // manual subscription
 
 full := reactive.Computed(func() string { return first.Get() + " " + last.Get() })
-full.Dispose()                               // detach from inputs
+full.Dispose()                    // detach from inputs
 
 reactive.Effect(func() { fmt.Println(count.Get()) }) // tracks deps automatically
 reactive.Batch(func() { first.Set("Ada"); last.Set("Lovelace") })
@@ -376,30 +396,30 @@ reactive.Untracked(func() string { return count.Get() }) // read, no subscriptio
 dispose := reactive.Scope(func() { /* effects owned here */ })
 ```
 
-DOM bindings:
+DOM bindings — signals and memos bind directly (they are `Readable`):
 
 ```go
-reactive.BindText(el, func() string { return strconv.Itoa(count.Get()) })
-reactive.BindHTML(el, md.Get)                    // unescaped — never user input
-reactive.BindAttr(el, "disabled", func() string { /* "" removes it */ })
-reactive.BindClass(el, "active", isActive.Get)
-reactive.BindStyle(el, "color", colour.Get)
-reactive.BindShow(el, visible.Get)
-reactive.BindWhen(parent, cond.Get, renderDashboard)
-reactive.BindValue(input, draft)                 // string
-reactive.BindNumber(input, amount)               // float64
-reactive.BindChecked(box, done)                  // bool
-reactive.On(el, "click", handler)                // auto-cleanup
+reactive.BindText(el, count)                       // formats numbers too
+reactive.BindHTML(el, md)                          // unescaped — never user input
+reactive.BindAttr(el, "disabled", reactive.Computed(func() string { /* "" removes it */ }))
+reactive.BindClass(el, "active", isActive)
+reactive.BindStyle(el, "color", colour)
+reactive.BindShow(el, visible)
+reactive.BindWhen(parent, cond, renderDashboard)
+reactive.BindValue(input, draft)                   // *StrSignal
+reactive.BindNumber(input, amount)                 // *NumSignal, ignores unparseable input
+reactive.BindChecked(box, done)                    // *BoolSignal
+reactive.On(el, "click", handler)                  // auto-cleanup
 ```
 
 Keyed lists:
 
 ```go
-reactive.BindList(list, items.Get,
+reactive.BindList(list, items,
 	func(t Todo) string { return t.ID },
-	func(t Todo) wasmwrap.Element {
-		row := wasmwrap.Create("li").SetText(t.Text)
-		return row
+	func(t Todo, row *reactive.Row) wasmwrap.Element {
+		el := wasmwrap.Create("li").SetText(t.Text)
+		return el
 	})
 ```
 
@@ -425,9 +445,7 @@ Using templ in the browser:
 
 ```go
 reactive.Hydrate("#counter", func(root wasmwrap.Element) {
-	reactive.BindText(root.Find("[data-count]"), func() string {
-		return strconv.Itoa(count.Get())
-	})
+	reactive.BindText(root.Find("[data-count]"), count)
 })
 reactive.HydrateAll(".widget", mount)                    // hydrate every match
 reactive.RenderTempl(views.Row(item))                     // component → string

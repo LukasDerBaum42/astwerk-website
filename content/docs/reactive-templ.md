@@ -1,8 +1,8 @@
 +++
 Title = "reactive — templ in the browser"
 Description = "Rendering and hydrating templ components client-side."
-Order = 63
-Group = "Client-side"
+Order = 190
+Group = "Add interactivity"
 +++
 
 templ is pure Go, so it compiles to wasm and runs in the browser unchanged —
@@ -15,11 +15,9 @@ These helpers are how a script gets templ output into the DOM.
 
 ```go
 reactive.Hydrate("#counter", func(root wasmwrap.Element) {
-	reactive.BindText(root.Find("[data-count]"), func() string {
-		return strconv.Itoa(count.Get())
-	})
+	reactive.BindText(root.Find("[data-count]"), count)
 	reactive.On(root.Find("[data-inc]"), "click", func(wasmwrap.Event) {
-		count.Update(func(v int) int { return v + 1 })
+		count.Inc(1)
 	})
 })
 ```
@@ -79,14 +77,12 @@ for handing to `BindList` or `BindWhen`. `BindTempl` is built on top of these.
 ## Example
 
 ```go
-count := reactive.NewSignal(0)
+count := reactive.Num(0)
 
 reactive.Hydrate("#counter", func(root wasmwrap.Element) {
-	reactive.BindText(root.Find("[data-count]"), func() string {
-		return strconv.Itoa(count.Get())
-	})
+	reactive.BindText(root.Find("[data-count]"), count)
 	reactive.On(root.Find("[data-inc]"), "click", func(wasmwrap.Event) {
-		count.Update(func(v int) int { return v + 1 })
+		count.Inc(1)
 	})
 })
 ```

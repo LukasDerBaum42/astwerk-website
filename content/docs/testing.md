@@ -1,7 +1,7 @@
 +++
 Title = "Testing"
 Description = "Unit-test reactive and wasmwrap bindings with jsdom — no browser, no headless driver."
-Order = 85
+Order = 220
 Group = "Reference"
 +++
 
@@ -18,7 +18,7 @@ yours can too.
 
 package main
 
-import "github.com/LukasDerBaum42/astwerk/jsdom"
+import "github.com/LukasDerBaum42/astwerk-live/jsdom"
 
 func init() { jsdom.Install() }
 ```
@@ -88,12 +88,11 @@ a real browser.
 package main
 
 import (
-	"strconv"
 	"testing"
 
-	"github.com/LukasDerBaum42/astwerk/jsdom"
-	"github.com/LukasDerBaum42/astwerk/reactive"
-	"github.com/LukasDerBaum42/astwerk/wasmwrap"
+	"github.com/LukasDerBaum42/astwerk-live/jsdom"
+	"github.com/LukasDerBaum42/astwerk-live/reactive"
+	"github.com/LukasDerBaum42/astwerk-live/wasmwrap"
 )
 
 func init() { jsdom.Install() }
@@ -102,9 +101,9 @@ func TestCounterIncrements(t *testing.T) {
 	jsdom.Reset()
 	root := wasmwrap.Wrap(jsdom.NewElement("div"))
 
-	count := reactive.NewSignal(0)
+	count := reactive.Num(0)
 	label := wasmwrap.Create("span")
-	reactive.BindText(label, func() string { return strconv.Itoa(count.Get()) })
+	reactive.BindText(label, count)
 	root.Append(label)
 
 	count.Set(3)

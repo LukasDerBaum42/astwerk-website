@@ -36,12 +36,19 @@ type NavGroup struct {
 	Items []NavItem
 }
 
-// Layout owns the page shell.
+// Layout owns the page shell and composes the pieces the site is built from:
+// the topbar, the sidebar (when the page has one), the footer, and the
+// scripts that genuinely span the page. Pages with a pre-main slot (the
+// tutorial's game HUD) pass it as pre — it renders directly under the
+// topbar, outside main, so sticky elements inside it stick against the page
+// height instead of the article's. Pages that replace the sidebar (the
+// tutorial's quest hub) pass it as side — it renders in the sidebar column
+// instead of Sidebar, and the page passes no sidebar.
 //
 // Every URL goes through c.Asset or c.Link rather than being written as a
 // literal "/…", because this site is served from /astwerk/ on GitHub Pages. Get
 // that wrong and every stylesheet and link 404s once deployed.
-func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component {
+func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup, pre []templ.Component, side ...templ.Component) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -69,7 +76,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(pageTitle(c.Title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 42, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 49, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -82,7 +89,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var3 templ.SafeURL
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(c.Asset("public/favicon.svg"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 43, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 50, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -95,7 +102,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(c.Asset("style/style.css"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 47, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 54, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -108,7 +115,7 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var5 templ.SafeURL
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(c.Asset("style/code.css"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 48, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 55, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -121,308 +128,109 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 		var templ_7745c5c3_Var6 templ.SafeURL
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs("https://lukasderbaum42.github.io" + c.URL())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 49, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 56, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"><meta name=\"description\" content=\"astwerk — a minimal, no-magic static site generator for Go and templ.\"><meta property=\"og:title\" content=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"><link rel=\"alternate\" hreflang=\"en\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageTitle(c.Title))
+		var templ_7745c5c3_Var7 templ.SafeURL
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs("https://lukasderbaum42.github.io" + c.Base + "/" + c.Rel())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 51, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 57, Col: 105}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><meta property=\"og:type\" content=\"website\"><script>\n\t\t\t\t// Applied before paint, so a saved preference never flashes the\n\t\t\t\t// wrong theme or accent. Dark is the default: no key means no attribute,\n\t\t\t\t// and the stylesheet's :root is already dark.\n\t\t\t\t(() => {\n\t\t\t\t\tconst t = localStorage.getItem(\"theme\");\n\t\t\t\t\tif (t === \"light\") document.documentElement.dataset.theme = \"light\";\n\t\t\t\t\tconst a = localStorage.getItem(\"accent\");\n\t\t\t\t\tif (a) document.documentElement.dataset.accent = a;\n\t\t\t\t})();\n\t\t\t</script></head><body><a class=\"skip\" href=\"#main\">Skip to content</a><header class=\"topbar\"><a class=\"brand\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><link rel=\"alternate\" hreflang=\"de\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 templ.SafeURL
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(""))
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs("https://lukasderbaum42.github.io" + c.Base + "/de/" + c.Rel())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 68, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 58, Col: 108}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><span class=\"mark\">&#9683;</span> astwerk</a><nav class=\"topnav\"><a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><meta name=\"description\" content=\"astwerk — a minimal, no-magic static site generator for Go and templ.\"><meta property=\"og:title\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var9 templ.SafeURL
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("docs/"))
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageTitle(c.Title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 72, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 60, Col: 57}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" aria-current=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:image\" content=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(ariaCurrent(c.Path, "docs"))
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue("https://lukasderbaum42.github.io" + c.Base + "/public/og.svg")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 72, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 62, Col: 101}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">Docs</a> <a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><meta name=\"twitter:card\" content=\"summary_large_image\"><script>\n\t\t\t\t// Applied before paint, so a saved preference never flashes the\n\t\t\t\t// wrong theme or accent. Dark is the default: no key means no attribute,\n\t\t\t\t// and the stylesheet's :root is already dark.\n\t\t\t\t(() => {\n\t\t\t\t\tconst t = localStorage.getItem(\"theme\");\n\t\t\t\t\tif (t === \"light\") document.documentElement.dataset.theme = \"light\";\n\t\t\t\t\tconst a = localStorage.getItem(\"accent\");\n\t\t\t\t\tif (a) document.documentElement.dataset.accent = a;\n\t\t\t\t})();\n\t\t\t</script></head><body><a class=\"skip\" href=\"#main\">Skip to content</a>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var11 templ.SafeURL
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("tutorial/"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 73, Col: 34}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+		templ_7745c5c3_Err = Topbar(c, len(sidebar) > 0).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" aria-current=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var12 string
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(ariaCurrent(c.Path, "tutorial"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 73, Col: 83}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">Tutorial</a> <a href=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var13 templ.SafeURL
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link("examples/"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 74, Col: 34}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" aria-current=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var14 string
-		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(ariaCurrent(c.Path, "examples"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 74, Col: 83}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">Examples</a> <a href=\"https://pkg.go.dev/github.com/LukasDerBaum42/astwerk\">API</a> <a href=\"https://github.com/LukasDerBaum42/astwerk\">GitHub</a> <button class=\"theme-toggle\" id=\"theme-toggle\" type=\"button\" aria-label=\"Toggle light and dark theme\"></button></nav></header>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if len(sidebar) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div class=\"with-sidebar\"><aside class=\"sidebar\"><p class=\"sidebar-title\">")
+		if c.Locale == "de" && !Translated[c.Rel()] {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"i18n-banner\"><p>Diese Seite ist noch nicht übersetzt — <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var15 string
-			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(sidebarTitle)
+			var templ_7745c5c3_Var11 templ.SafeURL
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(c.InLocale(""))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 88, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 83, Col: 30}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</p>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			for _, group := range sidebar {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<nav class=\"sidebar-group\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				if group.Title != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<p class=\"sidebar-group-title\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var16 string
-					templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(group.Title)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 92, Col: 53}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</p>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				for _, item := range group.Items {
-					if item.Path == c.Path {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<a href=\"")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var17 templ.SafeURL
-						templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(item.Path))
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 96, Col: 37}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" class=\"active\" aria-current=\"page\">")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var18 string
-						templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 96, Col: 87}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</a> ")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						if len(item.Sub) > 0 {
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<ul class=\"sidebar-sub\">")
-							if templ_7745c5c3_Err != nil {
-								return templ_7745c5c3_Err
-							}
-							for _, sub := range item.Sub {
-								if sub.Deep {
-									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<li><a class=\"deep\" href=\"")
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									var templ_7745c5c3_Var19 templ.SafeURL
-									templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(c.Link(item.Path) + sub.Anchor))
-									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 101, Col: 86}
-									}
-									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\">")
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									var templ_7745c5c3_Var20 string
-									templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(sub.Label)
-									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 101, Col: 100}
-									}
-									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</a></li>")
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-								} else {
-									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<li><a href=\"")
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									var templ_7745c5c3_Var21 templ.SafeURL
-									templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(c.Link(item.Path) + sub.Anchor))
-									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 103, Col: 73}
-									}
-									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\">")
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									var templ_7745c5c3_Var22 string
-									templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(sub.Label)
-									if templ_7745c5c3_Err != nil {
-										return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 103, Col: 87}
-									}
-									_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-									templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</a></li>")
-									if templ_7745c5c3_Err != nil {
-										return templ_7745c5c3_Err
-									}
-								}
-							}
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</ul>")
-							if templ_7745c5c3_Err != nil {
-								return templ_7745c5c3_Err
-							}
-						}
-					} else {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<a href=\"")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var23 templ.SafeURL
-						templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(c.Link(item.Path))
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 109, Col: 37}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\">")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var24 string
-						templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(item.Label)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/layout.templ`, Line: 109, Col: 52}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</a>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</nav>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">English version</a>.</p></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		for _, p := range pre {
+			templ_7745c5c3_Err = p.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		if len(side) > 0 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"with-sidebar\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			for _, s := range side {
+				templ_7745c5c3_Err = s.Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</aside><main id=\"main\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<main id=\"main\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -430,12 +238,33 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</main></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else if len(sidebar) > 0 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<div class=\"with-sidebar\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = Sidebar(c, sidebarTitle, sidebar).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<main id=\"main\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ_7745c5c3_Var1.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<main id=\"main\" class=\"wide\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<main id=\"main\" class=\"wide\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -443,12 +272,16 @@ func Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) templ.Component 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<footer class=\"footer\"><p>astwerk is MIT licensed. This site is built with astwerk — <a href=\"https://github.com/LukasDerBaum42/astwerk-website\">its own source</a> is in the repo.</p></footer><button class=\"back-to-top\" type=\"button\" aria-label=\"Back to top\">&uarr;</button><script>\n\t\t\t\t(() => {\n\t\t\t\t\tconst btn = document.getElementById(\"theme-toggle\");\n\t\t\t\t\tbtn.addEventListener(\"click\", () => {\n\t\t\t\t\t\tconst light = document.documentElement.dataset.theme === \"light\";\n\t\t\t\t\t\tif (light) {\n\t\t\t\t\t\t\tdelete document.documentElement.dataset.theme;\n\t\t\t\t\t\t\tlocalStorage.setItem(\"theme\", \"dark\");\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tdocument.documentElement.dataset.theme = \"light\";\n\t\t\t\t\t\t\tlocalStorage.setItem(\"theme\", \"light\");\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// Give every highlighted block a header with a copy button.\n\t\t\t\t// Templ snippets carry their own header; markdown fences get one\n\t\t\t\t// added here so the two look identical.\n\t\t\t\t(() => {\n\t\t\t\t\tconst copyText = (text) => {\n\t\t\t\t\t\tif (navigator.clipboard && window.isSecureContext) {\n\t\t\t\t\t\t\treturn navigator.clipboard.writeText(text);\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn new Promise((resolve, reject) => {\n\t\t\t\t\t\t\tconst ta = document.createElement(\"textarea\");\n\t\t\t\t\t\t\tta.value = text;\n\t\t\t\t\t\t\tta.style.position = \"fixed\";\n\t\t\t\t\t\t\tta.style.opacity = \"0\";\n\t\t\t\t\t\t\tdocument.body.appendChild(ta);\n\t\t\t\t\t\t\tta.select();\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tdocument.execCommand(\"copy\");\n\t\t\t\t\t\t\t\tresolve();\n\t\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\t\treject(err);\n\t\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\t\tdocument.body.removeChild(ta);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t};\n\n\t\t\t\t\tdocument.querySelectorAll(\"pre.chroma\").forEach((pre) => {\n\t\t\t\t\t\tlet box = pre.closest(\".code\");\n\t\t\t\t\t\tif (!box) {\n\t\t\t\t\t\t\tbox = document.createElement(\"div\");\n\t\t\t\t\t\t\tbox.className = \"code\";\n\t\t\t\t\t\t\tpre.parentNode.insertBefore(box, pre);\n\t\t\t\t\t\t\tbox.appendChild(pre);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tlet header = box.querySelector(\".code-header\");\n\t\t\t\t\t\tif (!header) {\n\t\t\t\t\t\t\theader = document.createElement(\"div\");\n\t\t\t\t\t\t\theader.className = \"code-header\";\n\t\t\t\t\t\t\tconst lang = document.createElement(\"span\");\n\t\t\t\t\t\t\tlang.className = \"code-lang\";\n\t\t\t\t\t\t\tlang.textContent = \"code\";\n\t\t\t\t\t\t\theader.appendChild(lang);\n\t\t\t\t\t\t\tbox.insertBefore(header, box.firstChild);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (!box.querySelector(\"[data-copy]\")) {\n\t\t\t\t\t\t\tconst btn = document.createElement(\"button\");\n\t\t\t\t\t\t\tbtn.type = \"button\";\n\t\t\t\t\t\t\tbtn.className = \"code-copy\";\n\t\t\t\t\t\t\tbtn.setAttribute(\"data-copy\", \"\");\n\t\t\t\t\t\t\tbtn.textContent = \"Copy\";\n\t\t\t\t\t\t\theader.appendChild(btn);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\t\t\tconst btn = e.target.closest ? e.target.closest(\"[data-copy]\") : null;\n\t\t\t\t\t\tif (!btn) return;\n\t\t\t\t\t\tconst box = btn.closest(\".code\");\n\t\t\t\t\t\tconst pre = box && box.querySelector(\"pre.chroma\");\n\t\t\t\t\t\tif (!pre) return;\n\t\t\t\t\t\tconst text = pre.textContent.replace(/\\n$/, \"\");\n\t\t\t\t\t\tcopyText(text).then(() => {\n\t\t\t\t\t\t\tbtn.textContent = \"Copied\";\n\t\t\t\t\t\t\tbtn.dataset.copied = \"true\";\n\t\t\t\t\t\t\tsetTimeout(() => {\n\t\t\t\t\t\t\t\tbtn.textContent = \"Copy\";\n\t\t\t\t\t\t\t\tdelete btn.dataset.copied;\n\t\t\t\t\t\t\t}, 1600);\n\t\t\t\t\t\t}).catch(() => {\n\t\t\t\t\t\t\tbtn.textContent = \"Failed\";\n\t\t\t\t\t\t\tsetTimeout(() => { btn.textContent = \"Copy\"; }, 1600);\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// Highlight the in-page heading the reader is currently at, and\n\t\t\t\t// show a back-to-top button once they have scrolled.\n\t\t\t\t(() => {\n\t\t\t\t\tconst subLinks = Array.from(document.querySelectorAll(\".sidebar-sub a\"));\n\t\t\t\t\tconst headings = subLinks\n\t\t\t\t\t\t.map((a) => {\n\t\t\t\t\t\t\tconst id = (a.getAttribute(\"href\") || \"\").split(\"#\")[1];\n\t\t\t\t\t\t\treturn id ? document.getElementById(id) : null;\n\t\t\t\t\t\t})\n\t\t\t\t\t\t.filter(Boolean);\n\n\t\t\t\t\tconst back = document.querySelector(\".back-to-top\");\n\n\t\t\t\t\tconst setCurrent = (i) => {\n\t\t\t\t\t\tsubLinks.forEach((a, j) => a.classList.toggle(\"active\", j === i));\n\t\t\t\t\t};\n\n\t\t\t\t\tconst onScroll = () => {\n\t\t\t\t\t\tif (back) {\n\t\t\t\t\t\t\tback.classList.toggle(\"visible\", window.scrollY > 400);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (!headings.length) return;\n\t\t\t\t\t\tconst top = 104; // sticky topbar offset\n\t\t\t\t\t\tlet idx = -1;\n\t\t\t\t\t\theadings.forEach((h, i) => {\n\t\t\t\t\t\t\tif (h.getBoundingClientRect().top <= top) idx = i;\n\t\t\t\t\t\t});\n\t\t\t\t\t\tsetCurrent(idx);\n\t\t\t\t\t};\n\n\t\t\t\t\tdocument.addEventListener(\"scroll\", onScroll, { passive: true });\n\t\t\t\t\tif (back) back.addEventListener(\"click\", () => window.scrollTo({ top: 0, behavior: \"smooth\" }));\n\t\t\t\t\tonScroll();\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// Tutorial quizzes: pick an option, see right/wrong plus the\n\t\t\t\t// explanation. A correct answer ticks the step's progress box by\n\t\t\t\t// reusing its change listener.\n\t\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\t\tconst btn = e.target.closest ? e.target.closest(\".quiz-option, .quiz-reset\") : null;\n\t\t\t\t\tif (!btn) return;\n\t\t\t\t\tconst quiz = btn.closest(\".quiz\");\n\t\t\t\t\tif (!quiz) return;\n\n\t\t\t\t\tif (btn.classList.contains(\"quiz-reset\")) {\n\t\t\t\t\t\tquiz.querySelectorAll(\".quiz-option\").forEach((b) => {\n\t\t\t\t\t\t\tb.disabled = false;\n\t\t\t\t\t\t\tb.classList.remove(\"right\", \"wrong\");\n\t\t\t\t\t\t});\n\t\t\t\t\t\tconst fb = quiz.querySelector(\".quiz-feedback\");\n\t\t\t\t\t\tif (fb) { fb.textContent = \"\"; fb.classList.remove(\"right\", \"wrong\"); }\n\t\t\t\t\t\tconst why = quiz.querySelector(\".quiz-why\");\n\t\t\t\t\t\tif (why) why.hidden = true;\n\t\t\t\t\t\tbtn.hidden = true;\n\t\t\t\t\t\tdelete quiz.dataset.done;\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (quiz.dataset.done) return;\n\t\t\t\t\tconst correct = Number(quiz.dataset.correct);\n\t\t\t\t\tconst picked = Number(btn.dataset.opt);\n\t\t\t\t\tconst fb = quiz.querySelector(\".quiz-feedback\");\n\t\t\t\t\tconst why = quiz.querySelector(\".quiz-why\");\n\t\t\t\t\tconst reset = quiz.querySelector(\".quiz-reset\");\n\n\t\t\t\t\tquiz.querySelectorAll(\".quiz-option\").forEach((b, i) => {\n\t\t\t\t\t\tb.disabled = true;\n\t\t\t\t\t\tif (i === correct) b.classList.add(\"right\");\n\t\t\t\t\t});\n\t\t\t\t\tif (picked === correct) {\n\t\t\t\t\t\tif (fb) { fb.textContent = \"Correct.\"; fb.classList.add(\"right\"); }\n\t\t\t\t\t\tconst box = document.querySelector(\".step-progress [data-step]\");\n\t\t\t\t\t\tif (box && !box.checked) {\n\t\t\t\t\t\t\tbox.checked = true;\n\t\t\t\t\t\t\tbox.dispatchEvent(new Event(\"change\"));\n\t\t\t\t\t\t}\n\t\t\t\t\t} else {\n\t\t\t\t\t\tbtn.classList.add(\"wrong\");\n\t\t\t\t\t\tif (fb) { fb.textContent = \"Not quite — the correct answer is highlighted.\"; fb.classList.add(\"wrong\"); }\n\t\t\t\t\t}\n\t\t\t\t\tif (why) why.hidden = false;\n\t\t\t\t\tif (reset) reset.hidden = false;\n\t\t\t\t\tquiz.dataset.done = \"1\";\n\t\t\t\t});\n\t\t\t</script></body></html>")
+		templ_7745c5c3_Err = Footer(c).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<button class=\"back-to-top\" type=\"button\" aria-label=\"Back to top\">&uarr;</button><script>\n\t\t\t\t// Give every highlighted block a header with a copy button.\n\t\t\t\t// Templ snippets carry their own header; markdown fences get one\n\t\t\t\t// added here so the two look identical.\n\t\t\t\t(() => {\n\t\t\t\t\tconst copyText = (text) => {\n\t\t\t\t\t\tif (navigator.clipboard && window.isSecureContext) {\n\t\t\t\t\t\t\treturn navigator.clipboard.writeText(text);\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn new Promise((resolve, reject) => {\n\t\t\t\t\t\t\tconst ta = document.createElement(\"textarea\");\n\t\t\t\t\t\t\tta.value = text;\n\t\t\t\t\t\t\tta.style.position = \"fixed\";\n\t\t\t\t\t\t\tta.style.opacity = \"0\";\n\t\t\t\t\t\t\tdocument.body.appendChild(ta);\n\t\t\t\t\t\t\tta.select();\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tdocument.execCommand(\"copy\");\n\t\t\t\t\t\t\t\tresolve();\n\t\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\t\treject(err);\n\t\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\t\tdocument.body.removeChild(ta);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t};\n\n\t\t\t\t\tdocument.querySelectorAll(\"pre.chroma\").forEach((pre) => {\n\t\t\t\t\t\tlet box = pre.closest(\".code\");\n\t\t\t\t\t\tif (!box) {\n\t\t\t\t\t\t\tbox = document.createElement(\"div\");\n\t\t\t\t\t\t\tbox.className = \"code\";\n\t\t\t\t\t\t\tpre.parentNode.insertBefore(box, pre);\n\t\t\t\t\t\t\tbox.appendChild(pre);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tlet header = box.querySelector(\".code-header\");\n\t\t\t\t\t\tif (!header) {\n\t\t\t\t\t\t\theader = document.createElement(\"div\");\n\t\t\t\t\t\t\theader.className = \"code-header\";\n\t\t\t\t\t\t\tconst lang = document.createElement(\"span\");\n\t\t\t\t\t\t\tlang.className = \"code-lang\";\n\t\t\t\t\t\t\tlang.textContent = \"code\";\n\t\t\t\t\t\t\theader.appendChild(lang);\n\t\t\t\t\t\t\tbox.insertBefore(header, box.firstChild);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (!box.querySelector(\"[data-copy]\")) {\n\t\t\t\t\t\t\tconst btn = document.createElement(\"button\");\n\t\t\t\t\t\t\tbtn.type = \"button\";\n\t\t\t\t\t\t\tbtn.className = \"code-copy\";\n\t\t\t\t\t\t\tbtn.setAttribute(\"data-copy\", \"\");\n\t\t\t\t\t\t\tbtn.textContent = \"Copy\";\n\t\t\t\t\t\t\theader.appendChild(btn);\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\n\t\t\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\t\t\tconst btn = e.target.closest ? e.target.closest(\"[data-copy]\") : null;\n\t\t\t\t\t\tif (!btn) return;\n\t\t\t\t\t\tconst box = btn.closest(\".code\");\n\t\t\t\t\t\tconst pre = box && box.querySelector(\"pre.chroma\");\n\t\t\t\t\t\tif (!pre) return;\n\t\t\t\t\t\tconst text = pre.textContent.replace(/\\n$/, \"\");\n\t\t\t\t\t\tcopyText(text).then(() => {\n\t\t\t\t\t\t\tbtn.textContent = \"Copied\";\n\t\t\t\t\t\t\tbtn.dataset.copied = \"true\";\n\t\t\t\t\t\t\tsetTimeout(() => {\n\t\t\t\t\t\t\t\tbtn.textContent = \"Copy\";\n\t\t\t\t\t\t\t\tdelete btn.dataset.copied;\n\t\t\t\t\t\t\t}, 1600);\n\t\t\t\t\t\t}).catch(() => {\n\t\t\t\t\t\t\tbtn.textContent = \"Failed\";\n\t\t\t\t\t\t\tsetTimeout(() => { btn.textContent = \"Copy\"; }, 1600);\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// Tutorial quizzes: pick an option, see right/wrong plus the\n\t\t\t\t// explanation. A correct answer marks the quiz solved (the step\n\t\t\t\t// progress and the game shell count solved quizzes) and is worth\n\t\t\t\t// double XP in the game — the astwerk:quiz event carries the\n\t\t\t\t// outcome and whether the quiz was already tried.\n\t\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\t\tconst btn = e.target.closest ? e.target.closest(\".quiz-option, .quiz-reset\") : null;\n\t\t\t\t\tif (!btn) return;\n\t\t\t\t\tconst quiz = btn.closest(\".quiz\");\n\t\t\t\t\tif (!quiz) return;\n\n\t\t\t\t\tif (btn.classList.contains(\"quiz-reset\")) {\n\t\t\t\t\t\tquiz.querySelectorAll(\".quiz-option\").forEach((b) => {\n\t\t\t\t\t\t\tb.disabled = false;\n\t\t\t\t\t\t\tb.classList.remove(\"right\", \"wrong\", \"hint\");\n\t\t\t\t\t\t});\n\t\t\t\t\t\tconst fb = quiz.querySelector(\".quiz-feedback\");\n\t\t\t\t\t\tif (fb) { fb.textContent = \"\"; fb.classList.remove(\"right\", \"wrong\"); }\n\t\t\t\t\t\tconst why = quiz.querySelector(\".quiz-why\");\n\t\t\t\t\t\tif (why) why.hidden = true;\n\t\t\t\t\t\tbtn.hidden = true;\n\t\t\t\t\t\tdelete quiz.dataset.done;\n\t\t\t\t\t\tdelete quiz.dataset.solved;\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (quiz.dataset.done) return;\n\t\t\t\t\tconst correct = Number(quiz.dataset.correct);\n\t\t\t\t\tconst picked = Number(btn.dataset.opt);\n\t\t\t\t\tconst fb = quiz.querySelector(\".quiz-feedback\");\n\t\t\t\t\tconst why = quiz.querySelector(\".quiz-why\");\n\t\t\t\t\tconst reset = quiz.querySelector(\".quiz-reset\");\n\n\t\t\t\t\t// The game shell scores this answer. firstTry is false after\n\t\t\t\t\t// the quiz was answered once, even if a reset let it be\n\t\t\t\t\t// answered again — the reset clears `done` but not `tried`.\n\t\t\t\t\tconst firstTry = quiz.dataset.tried !== \"1\";\n\t\t\t\t\tquiz.dataset.tried = \"1\";\n\n\t\t\t\t\tquiz.querySelectorAll(\".quiz-option\").forEach((b, i) => {\n\t\t\t\t\t\tb.disabled = true;\n\t\t\t\t\t\tif (i === correct) b.classList.add(\"right\");\n\t\t\t\t\t});\n\t\t\t\t\tif (picked === correct) {\n\t\t\t\t\t\tif (fb) { fb.textContent = \"Correct.\"; fb.classList.add(\"right\"); }\n\t\t\t\t\t\t// Solved: the step progress and the derived completion both\n\t\t\t\t\t\t// count quizzes by this mark.\n\t\t\t\t\t\tquiz.dataset.solved = \"1\";\n\t\t\t\t\t} else {\n\t\t\t\t\t\tbtn.classList.add(\"wrong\");\n\t\t\t\t\t\t// First wrong attempt: a hint from the explanation, so the\n\t\t\t\t\t\t// retry is a learning step; the full \"why\" comes after the\n\t\t\t\t\t\t// second attempt.\n\t\t\t\t\t\tconst tries = Number(quiz.dataset.tries || \"0\") + 1;\n\t\t\t\t\t\tquiz.dataset.tries = String(tries);\n\t\t\t\t\t\tconst whyText = why ? why.textContent : \"\";\n\t\t\t\t\t\tif (tries === 1 && whyText) {\n\t\t\t\t\t\t\tconst hint = whyText.length > 90 ? whyText.slice(0, 90).replace(/\\s+\\S*$/, \"\") + \"…\" : whyText;\n\t\t\t\t\t\t\tif (fb) {\n\t\t\t\t\t\t\t\tfb.textContent = \"Not quite. Hint: \" + hint;\n\t\t\t\t\t\t\t\tfb.classList.add(\"wrong\");\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t} else if (fb) {\n\t\t\t\t\t\t\tfb.textContent = \"Not quite — the correct answer is highlighted.\";\n\t\t\t\t\t\t\tfb.classList.add(\"wrong\");\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tif (why) why.hidden = false;\n\t\t\t\t\tif (reset) reset.hidden = false;\n\t\t\t\t\tquiz.dataset.done = \"1\";\n\t\t\t\t\twindow.dispatchEvent(new CustomEvent(\"astwerk:quiz\", {\n\t\t\t\t\t\tdetail: { correct: picked === correct, firstTry, quiz },\n\t\t\t\t\t}));\n\t\t\t\t});\n\t\t\t</script><script>\n\t\t\t// The step lab's checker (06-step-lab.md): vanilla, keyed off the\n\t\t\t// frame's [data-lab-slot] widgets. Each slot declares its check chain —\n\t\t\t// pick (the chosen candidate is the answer), shape (the declared\n\t\t\t// form), render (the value substituted into the slot's template line,\n\t\t\t// normalized and compared to the expected rendered output), relate (a\n\t\t\t// named relationship to another slot or the quest's context). The\n\t\t\t// canonical answer is only ever the reveal and the render\n\t\t\t// comparison's source — never a raw string match. Every correct\n\t\t\t// slot dispatches astwerk:lab; the game shell scores it.\n\t\t\t(() => {\n\t\t\t\tconst frame = document.querySelector(\"[data-lab]\");\n\t\t\t\tif (!frame) return;\n\n\t\t\t\tconst shapeForms = {\n\t\t\t\t\tidentifier: (v) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(v),\n\t\t\t\t\tint: (v) => /^\\d+$/.test(v),\n\t\t\t\t\tpath: (v) => v.length > 0 && !v.startsWith(\"/\") && v.trim() === v,\n\t\t\t\t\tslug: (v) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(v),\n\t\t\t\t\tfile: (v) => /^[a-z0-9][a-z0-9._-]*$/.test(v),\n\t\t\t\t\tquoted: (v) => /^([\"']).*\\1$/.test(v),\n\t\t\t\t\tflag: (v) => /^--?[a-z0-9][a-z0-9-]*$/.test(v),\n\t\t\t\t};\n\t\t\t\tconst norm = (s) => (s || \"\").trim().replace(/\\s+/g, \" \");\n\t\t\t\tconst slots = Array.from(frame.querySelectorAll(\"[data-lab-slot]\"));\n\t\t\t\t// A slot may appear twice in a file (the signal name is both the\n\t\t\t\t// variable and the string) — one key, one reward, one verdict.\n\t\t\t\tconst unique = [...new Set(slots.map((s) => s.dataset.labSlot))];\n\t\t\t\tconst group = (slot) => slots.filter((s) => s.dataset.labSlot === slot.dataset.labSlot);\n\t\t\t\tconst fileOf = (slot) => slot.closest(\"[data-lab-file]\");\n\t\t\t\t// Order-mode files: the whole change scrambled — one practice\n\t\t\t\t// unit per file, marked by its own state.\n\t\t\t\tconst orderFiles = Array.from(frame.querySelectorAll(\"[data-lab-order-file]\"));\n\n\t\t\t\tconst verdict = (file) => {\n\t\t\t\t\tconst v = file && file.querySelector(\"[data-verdict]\");\n\t\t\t\t\tif (!v) return;\n\t\t\t\t\tconst keys = [...new Set(Array.from(file.querySelectorAll(\"[data-lab-slot]\")).map((s) => s.dataset.labSlot))];\n\t\t\t\t\tconst ok = keys.filter((k) => slots.find((s) => s.dataset.labSlot === k).dataset.state === \"ok\").length;\n\t\t\t\t\tif (keys.length && ok === keys.length) {\n\t\t\t\t\t\tv.textContent = ok + \" of \" + keys.length + \" checks pass\";\n\t\t\t\t\t\tv.classList.add(\"ok\");\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t\tconst progress = () => {\n\t\t\t\t\tconst p = frame.querySelector(\"[data-lab-progress]\");\n\t\t\t\t\tif (!p) return;\n\t\t\t\t\tconst okFill = unique.filter((k) => slots.find((s) => s.dataset.labSlot === k).dataset.state === \"ok\").length;\n\t\t\t\t\tconst okOrder = orderFiles.filter((f) => f.dataset.state === \"ok\").length;\n\t\t\t\t\tp.textContent = (okFill + okOrder) + \"/\" + (unique.length + orderFiles.length) + \" slots\";\n\t\t\t\t};\n\t\t\t\tconst fire = (slot, correct, peek, reveal) => {\n\t\t\t\t\twindow.dispatchEvent(new CustomEvent(\"astwerk:lab\", {\n\t\t\t\t\t\tdetail: { quest: frame.dataset.labQuest, slot: slot.dataset.labSlot, correct, peek: !!peek, reveal: !!reveal },\n\t\t\t\t\t}));\n\t\t\t\t};\n\t\t\t\tconst fireOrder = (file, peek, reveal) => {\n\t\t\t\t\twindow.dispatchEvent(new CustomEvent(\"astwerk:lab\", {\n\t\t\t\t\t\tdetail: { quest: frame.dataset.labQuest, slot: file.dataset.labOrderFile, correct: true, peek: !!peek, reveal: !!reveal },\n\t\t\t\t\t}));\n\t\t\t\t};\n\n\t\t\t\t// --- Order mode: the whole change, scrambled. The reader moves\n\t\t\t\t// the chips; a line is in place when its position matches its\n\t\t\t\t// canonical index — the verdict is about the order, never text.\n\t\t\t\tconst orderLines = (file) => Array.from(file.querySelectorAll(\"[data-order-pos]\"));\n\t\t\t\tconst orderInPlace = (file) => {\n\t\t\t\t\tconst lines = orderLines(file);\n\t\t\t\t\treturn lines.length > 0 && lines.every((l, i) => Number(l.dataset.orderPos) === i);\n\t\t\t\t};\n\t\t\t\tconst orderVerdict = (file) => {\n\t\t\t\t\tconst v = file.querySelector(\"[data-verdict]\");\n\t\t\t\t\tconst lines = orderLines(file);\n\t\t\t\t\tconst ok = lines.filter((l, i) => Number(l.dataset.orderPos) === i).length;\n\t\t\t\t\tlines.forEach((l, i) => l.classList.toggle(\"in-place\", Number(l.dataset.orderPos) === i));\n\t\t\t\t\tconst wasOk = file.dataset.state === \"ok\";\n\t\t\t\t\tfile.dataset.state = ok === lines.length && lines.length ? \"ok\" : \"bad\";\n\t\t\t\t\tif (v) {\n\t\t\t\t\t\tif (ok === lines.length && lines.length) {\n\t\t\t\t\t\t\tv.textContent = ok + \" of \" + lines.length + \" lines in place — the whole change is right.\";\n\t\t\t\t\t\t\tv.classList.add(\"ok\");\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tv.textContent = ok + \" of \" + lines.length + \" lines in place — move the ones that don't fit.\";\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\t// The award lands the moment the order first becomes right —\n\t\t\t\t\t// dragging or the buttons alone complete the exercise; Check\n\t\t\t\t\t// then only reveals what's still off.\n\t\t\t\t\tif (ok === lines.length && lines.length && !wasOk) fireOrder(file);\n\t\t\t\t\tprogress();\n\t\t\t\t\treturn ok === lines.length && lines.length;\n\t\t\t\t};\n\t\t\t\tconst moveLine = (line, dir) => {\n\t\t\t\t\tconst file = line.closest(\"[data-lab-order-file]\");\n\t\t\t\t\tconst list = file.querySelector(\".lab-order-list\");\n\t\t\t\t\tconst lines = orderLines(file);\n\t\t\t\t\tconst i = lines.indexOf(line);\n\t\t\t\t\tconst j = i + dir;\n\t\t\t\t\tif (j < 0 || j >= lines.length) return;\n\t\t\t\t\tif (dir < 0) list.insertBefore(line, lines[j]);\n\t\t\t\t\telse list.insertBefore(lines[j], line);\n\t\t\t\t\torderVerdict(file);\n\t\t\t\t};\n\t\t\t\tconst shuffleOrder = (file) => {\n\t\t\t\t\tconst list = file.querySelector(\".lab-order-list\");\n\t\t\t\t\tconst lines = orderLines(file);\n\t\t\t\t\tfor (let i = lines.length - 1; i > 0; i--) {\n\t\t\t\t\t\tconst j = Math.floor(Math.random() * (i + 1));\n\t\t\t\t\t\t[lines[i], lines[j]] = [lines[j], lines[i]];\n\t\t\t\t\t}\n\t\t\t\t\tlines.forEach((l) => list.appendChild(l));\n\t\t\t\t\tdelete file.dataset.state;\n\t\t\t\t\tconst v = file.querySelector(\"[data-verdict]\");\n\t\t\t\t\tif (v) { v.textContent = \"\"; v.classList.remove(\"ok\"); }\n\t\t\t\t\tprogress();\n\t\t\t\t};\n\t\t\t\tconst sortOrder = (file) => {\n\t\t\t\t\tconst list = file.querySelector(\".lab-order-list\");\n\t\t\t\t\torderLines(file)\n\t\t\t\t\t\t.sort((a, b) => Number(a.dataset.orderPos) - Number(b.dataset.orderPos))\n\t\t\t\t\t\t.forEach((l) => list.appendChild(l));\n\t\t\t\t};\n\n\t\t\t\tconst checkSlot = (slot) => {\n\t\t\t\t\tconst value = slot.value.trim();\n\t\t\t\t\tconst checks = (slot.dataset.check || \"\").split(\",\").map((s) => s.trim()).filter(Boolean);\n\t\t\t\t\tfor (const kind of checks) {\n\t\t\t\t\t\tif (kind === \"pick\") {\n\t\t\t\t\t\t\t// A pick's candidates are the vocabulary — the chosen\n\t\t\t\t\t\t\t// chip must be the canonical one.\n\t\t\t\t\t\t\tif (value !== slot.dataset.canonical) {\n\t\t\t\t\t\t\t\treturn { ok: false, msg: \"That's not it. \" + (slot.dataset.hint || \"\") };\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (kind === \"shape\") {\n\t\t\t\t\t\t\tconst form = shapeForms[slot.dataset.form || \"\"];\n\t\t\t\t\t\t\tif (form && !form(value)) {\n\t\t\t\t\t\t\t\treturn { ok: false, msg: \"That doesn't look like a \" + (slot.dataset.form || \"value\") + \". \" + (slot.dataset.hint || \"\") };\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (kind === \"line\") {\n\t\t\t\t\t\t\t// A whole-line slot: the tokens must match — spacing, quotes\n\t\t\t\t\t\t\t// and formatting never need to be exact, the mechanism does.\n\t\t\t\t\t\t\tif (!value) return { ok: false, msg: \"The line is empty — write it first.\" };\n\t\t\t\t\t\t\tif (!sameLine(value, slot.dataset.canonical)) {\n\t\t\t\t\t\t\t\treturn { ok: false, msg: \"Not quite — the mechanism's tokens differ. \" + (slot.dataset.hint || \"\") };\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (kind === \"render\") {\n\t\t\t\t\t\t\tif (!value) return { ok: false, msg: \"The slot is empty — type your answer first.\" };\n\t\t\t\t\t\t\tconst rendered = slot.dataset.renderTpl.replace(\"__SLOT__\", value);\n\t\t\t\t\t\t\tif (norm(rendered) !== norm(slot.dataset.renderExpected)) {\n\t\t\t\t\t\t\t\treturn { ok: false, msg: \"Your line renders: \" + rendered + \" — the expected result shows: \" + slot.dataset.renderExpected + \". \" + (slot.dataset.hint || \"\") };\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\tif (kind === \"relate\") {\n\t\t\t\t\t\t\tlet withVal = slot.dataset.relateWith || \"\";\n\t\t\t\t\t\t\tconst m = withVal.match(/^\\{\\{(.+)\\}\\}$/);\n\t\t\t\t\t\t\tif (m) {\n\t\t\t\t\t\t\t\tconst other = frame.querySelector('[data-lab-slot=\"' + m[1] + '\"]');\n\t\t\t\t\t\t\t\twithVal = other ? other.value.trim() : \"\";\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tconst ok = slot.dataset.relateKind === \"neq\" ? value !== withVal\n\t\t\t\t\t\t\t\t: slot.dataset.relateKind === \"contains\" ? value.includes(withVal)\n\t\t\t\t\t\t\t\t: value === withVal;\n\t\t\t\t\t\t\tif (!ok) {\n\t\t\t\t\t\t\t\treturn { ok: false, msg: (slot.dataset.relateLabel || \"That breaks a relationship the quest needs.\") + \" \" + (slot.dataset.hint || \"\") };\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\treturn { ok: true, msg: \"\" };\n\t\t\t\t};\n\n\t\t\t\t// sameLine compares two code lines by tokens — identifiers, numbers\n\t\t\t\t// and string contents — so whitespace, quotes and formatting never\n\t\t\t\t// need to match exactly: the mechanism does.\n\t\t\t\tconst tokenize = (s) => {\n\t\t\t\t\tconst out = [];\n\t\t\t\t\tconst re = /\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|[A-Za-z_][A-Za-z0-9_]*|\\d+(?:\\.\\d+)?|[^\\sA-Za-z0-9_]/g;\n\t\t\t\t\tlet m;\n\t\t\t\t\twhile ((m = re.exec(s))) {\n\t\t\t\t\t\tlet t = m[0];\n\t\t\t\t\t\tif (t.length > 1 && ((t[0] === '\"' && t[t.length - 1] === '\"') || (t[0] === \"'\" && t[t.length - 1] === \"'\"))) {\n\t\t\t\t\t\t\tt = t.slice(1, -1);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tout.push(t);\n\t\t\t\t\t}\n\t\t\t\t\treturn out;\n\t\t\t\t};\n\t\t\t\tconst sameLine = (a, b) => {\n\t\t\t\t\tconst ta = tokenize(a);\n\t\t\t\t\tconst tb = tokenize(b);\n\t\t\t\t\tif (ta.length !== tb.length) return false;\n\t\t\t\t\treturn ta.every((t, i) => t === tb[i]);\n\t\t\t\t};\n\n\t\t\t\t// setSlotValue writes a slot's value — a typed input's or a pick's\n\t\t\t\t// chosen chip — and updates the pick's highlighting and the live\n\t\t\t\t// preview.\n\t\t\t\tconst updateLive = (slot) => {\n\t\t\t\t\tconst el = frame.querySelector('[data-lab-live=\"' + slot.dataset.labSlot + '\"]');\n\t\t\t\t\tif (!el || !slot.dataset.renderTpl) return;\n\t\t\t\t\tconst v = (slot.value || \"\").trim();\n\t\t\t\t\tel.textContent = v ? slot.dataset.renderTpl.replace(\"__SLOT__\", v) : \"\";\n\t\t\t\t};\n\t\t\t\tconst setSlotValue = (slot, v) => {\n\t\t\t\t\tslot.value = v;\n\t\t\t\t\tslot.querySelectorAll(\"[data-lab-option]\").forEach((b) => {\n\t\t\t\t\t\tb.classList.toggle(\"picked\", b.dataset.labOption === v);\n\t\t\t\t\t});\n\t\t\t\t\tupdateLive(slot);\n\t\t\t\t};\n\n\t\t\t\t// apply grades one slot. With reveal, a wrong or empty answer is\n\t\t\t\t// answered: the canonical fills in with the why — the Check button\n\t\t\t\t// teaches, it doesn't just grade. Without reveal (typing, picking,\n\t\t\t\t// Enter) a wrong answer shows the hint and stays editable.\n\t\t\t\tconst apply = (slot, reveal) => {\n\t\t\t\t\tconst v = fileOf(slot) && fileOf(slot).querySelector(\"[data-verdict]\");\n\t\t\t\t\tlet msg = \"\";\n\t\t\t\t\tconst value = (slot.value || \"\").trim();\n\t\t\t\t\tif (!value) {\n\t\t\t\t\t\tif (!reveal) return;\n\t\t\t\t\t\tgroup(slot).forEach((s) => {\n\t\t\t\t\t\t\tsetSlotValue(s, s.dataset.canonical);\n\t\t\t\t\t\t\ts.dataset.state = \"ok\";\n\t\t\t\t\t\t\ts.classList.toggle(\"ok\", true);\n\t\t\t\t\t\t\ts.classList.toggle(\"bad\", false);\n\t\t\t\t\t\t});\n\t\t\t\t\t\tfire(slot, true, false, true);\n\t\t\t\t\t\tmsg = \"The answer is: \" + slot.dataset.canonical + \". \" + (slot.dataset.hint || \"\");\n\t\t\t\t\t} else {\n\t\t\t\t\t\tconst r = checkSlot(slot);\n\t\t\t\t\t\tgroup(slot).forEach((s) => {\n\t\t\t\t\t\t\ts.dataset.state = r.ok ? \"ok\" : \"bad\";\n\t\t\t\t\t\t\ts.classList.toggle(\"ok\", r.ok);\n\t\t\t\t\t\t\ts.classList.toggle(\"bad\", !r.ok);\n\t\t\t\t\t\t\ts.setAttribute(\"aria-invalid\", String(!r.ok));\n\t\t\t\t\t\t});\n\t\t\t\t\t\tif (r.ok) {\n\t\t\t\t\t\t\t// A value that renders identically is correct, however it was\n\t\t\t\t\t\t\t// typed — the canonical answer never entered the comparison.\n\t\t\t\t\t\t\tfire(slot, true);\n\t\t\t\t\t\t} else if (reveal) {\n\t\t\t\t\t\t\tgroup(slot).forEach((s) => {\n\t\t\t\t\t\t\t\tsetSlotValue(s, s.dataset.canonical);\n\t\t\t\t\t\t\t\ts.dataset.state = \"ok\";\n\t\t\t\t\t\t\t\ts.classList.toggle(\"ok\", true);\n\t\t\t\t\t\t\t\ts.classList.toggle(\"bad\", false);\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\tfire(slot, true, false, true);\n\t\t\t\t\t\t\tmsg = \"Not quite. The answer is: \" + slot.dataset.canonical + \". \" + (slot.dataset.hint || \"\");\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tfire(slot, false);\n\t\t\t\t\t\t\tmsg = r.msg;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tverdict(fileOf(slot));\n\t\t\t\t\tprogress();\n\t\t\t\t\t// The per-slot feedback wins over the file's count summary.\n\t\t\t\t\tif (msg && v) v.textContent = msg;\n\t\t\t\t};\n\n\t\t\t\tconst reset = () => {\n\t\t\t\t\tslots.forEach((slot) => {\n\t\t\t\t\t\tsetSlotValue(slot, \"\");\n\t\t\t\t\t\tdelete slot.dataset.state;\n\t\t\t\t\t\tslot.classList.remove(\"ok\", \"bad\");\n\t\t\t\t\t\tslot.removeAttribute(\"aria-invalid\");\n\t\t\t\t\t});\n\t\t\t\t\torderFiles.forEach(shuffleOrder);\n\t\t\t\t\tframe.querySelectorAll(\"[data-verdict]\").forEach((v) => (v.textContent = \"\"));\n\t\t\t\t\tprogress();\n\t\t\t\t};\n\t\t\t\tconst peek = () => {\n\t\t\t\t\tslots.forEach((slot) => {\n\t\t\t\t\t\tif (slot.dataset.state === \"ok\") return;\n\t\t\t\t\t\tgroup(slot).forEach((s) => {\n\t\t\t\t\t\t\tsetSlotValue(s, s.dataset.canonical);\n\t\t\t\t\t\t\ts.dataset.state = \"ok\";\n\t\t\t\t\t\t\ts.classList.toggle(\"ok\", true);\n\t\t\t\t\t\t\ts.classList.toggle(\"bad\", false);\n\t\t\t\t\t\t});\n\t\t\t\t\t\tfire(slot, true, true);\n\t\t\t\t\t});\n\t\t\t\t\torderFiles.forEach((file) => {\n\t\t\t\t\t\tif (file.dataset.state === \"ok\") return;\n\t\t\t\t\t\tsortOrder(file);\n\t\t\t\t\t\tfile.dataset.state = \"ok\";\n\t\t\t\t\t\tfireOrder(file, true);\n\t\t\t\t\t});\n\t\t\t\t\tframe.querySelectorAll(\"[data-verdict]\").forEach((v) => (v.textContent = \"Peeked — every slot revealed. Nothing is ever deducted.\"));\n\t\t\t\t\tprogress();\n\t\t\t\t};\n\n\t\t\t\t// Drag to reorder: pointer-drag the handle, the line follows. The\n\t\t\t\t// up/down buttons stay for keyboard and coarse pointers.\n\t\t\t\tconst drag = { line: null, file: null };\n\t\t\t\tconst endDrag = () => {\n\t\t\t\t\tif (drag.line) drag.line.classList.remove(\"dragging\");\n\t\t\t\t\tdrag.line = null;\n\t\t\t\t\tdrag.file = null;\n\t\t\t\t};\n\t\t\t\torderFiles.forEach((file) => {\n\t\t\t\t\tfile.querySelectorAll(\"[data-order-handle]\").forEach((handle) => {\n\t\t\t\t\t\thandle.addEventListener(\"pointerdown\", (e) => {\n\t\t\t\t\t\t\te.preventDefault();\n\t\t\t\t\t\t\tdrag.line = handle.closest(\"[data-order-pos]\");\n\t\t\t\t\t\t\tdrag.file = file;\n\t\t\t\t\t\t\tdrag.line.classList.add(\"dragging\");\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t\tdocument.addEventListener(\"pointermove\", (e) => {\n\t\t\t\t\tif (!drag.line) return;\n\t\t\t\t\tconst over = document.elementFromPoint(e.clientX, e.clientY);\n\t\t\t\t\tconst target = over && over.closest(\"[data-order-pos]\");\n\t\t\t\t\tif (!target || target === drag.line) return;\n\t\t\t\t\tconst list = drag.file.querySelector(\".lab-order-list\");\n\t\t\t\t\tconst lines = orderLines(drag.file);\n\t\t\t\t\tconst i = lines.indexOf(drag.line);\n\t\t\t\t\tconst j = lines.indexOf(target);\n\t\t\t\t\tif (i < j) list.insertBefore(drag.line, target.nextSibling);\n\t\t\t\t\telse list.insertBefore(drag.line, target);\n\t\t\t\t\torderVerdict(drag.file);\n\t\t\t\t});\n\t\t\t\tdocument.addEventListener(\"pointerup\", endDrag);\n\t\t\t\tdocument.addEventListener(\"pointercancel\", endDrag);\n\n\t\t\t\tframe.addEventListener(\"click\", (e) => {\n\t\t\t\t\t// Picks: dropping in a chip is the answer — apply it.\n\t\t\t\t\tconst opt = e.target.closest ? e.target.closest(\"[data-lab-option]\") : null;\n\t\t\t\t\tif (opt) {\n\t\t\t\t\t\tconst slot = opt.closest(\"[data-lab-slot]\");\n\t\t\t\t\t\tif (slot && slot.value !== opt.dataset.labOption) {\n\t\t\t\t\t\t\t// The same key may render twice (the signal name is both\n\t\t\t\t\t\t\t// the variable and the string) — keep every chip row in\n\t\t\t\t\t\t\t// step, one pick, one state.\n\t\t\t\t\t\t\tgroup(slot).forEach((s) => setSlotValue(s, opt.dataset.labOption));\n\t\t\t\t\t\t\tif (slot.value.trim()) apply(slot);\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tconst btn = e.target.closest ? e.target.closest(\"[data-lab-check], [data-lab-reset], [data-lab-peek]\") : null;\n\t\t\t\t\tif (btn) {\n\t\t\t\t\t\tif (btn.matches(\"[data-lab-check]\")) {\n\t\t\t\t\t\t\t// Check grades everything — and answers the ones that are\n\t\t\t\t\t\t\t// wrong or empty, so the lab teaches, never blocks.\n\t\t\t\t\t\t\tslots.forEach((slot) => apply(slot, true));\n\t\t\t\t\t\t\torderFiles.forEach((file) => {\n\t\t\t\t\t\t\t\tif (!orderVerdict(file)) {\n\t\t\t\t\t\t\t\t\tsortOrder(file);\n\t\t\t\t\t\t\t\t\tfile.dataset.state = \"ok\";\n\t\t\t\t\t\t\t\t\tfireOrder(file, false, true);\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t} else if (btn.matches(\"[data-lab-reset]\")) {\n\t\t\t\t\t\t\treset();\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tpeek();\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tconst up = e.target.closest ? e.target.closest(\"[data-order-up]\") : null;\n\t\t\t\t\tif (up) { moveLine(up.closest(\"[data-order-pos]\"), -1); return; }\n\t\t\t\t\tconst down = e.target.closest ? e.target.closest(\"[data-order-down]\") : null;\n\t\t\t\t\tif (down) { moveLine(down.closest(\"[data-order-pos]\"), 1); }\n\t\t\t\t});\n\t\t\t\tframe.addEventListener(\"change\", (e) => {\n\t\t\t\t\tconst slot = e.target.closest ? e.target.closest(\"[data-lab-slot]\") : null;\n\t\t\t\t\tif (slot && slot.value.trim()) apply(slot);\n\t\t\t\t});\n\t\t\t\tframe.addEventListener(\"input\", (e) => {\n\t\t\t\t\tconst slot = e.target.closest ? e.target.closest(\"[data-lab-slot]\") : null;\n\t\t\t\t\tif (slot) updateLive(slot);\n\t\t\t\t});\n\t\t\t\tframe.addEventListener(\"keydown\", (e) => {\n\t\t\t\t\tif (e.key === \"Enter\" && e.target.matches && e.target.matches(\"[data-lab-slot]\")) apply(e.target);\n\t\t\t\t});\n\t\t\t\tframe.querySelectorAll(\"[data-lab-tab]\").forEach((tab) => {\n\t\t\t\t\ttab.addEventListener(\"click\", () => {\n\t\t\t\t\t\tframe.querySelectorAll(\"[data-lab-tab]\").forEach((t) => t.classList.toggle(\"on\", t === tab));\n\t\t\t\t\t\tframe.querySelectorAll(\"[data-lab-file]\").forEach((f) => {\n\t\t\t\t\t\t\tf.hidden = f.dataset.labFile !== tab.dataset.labTab;\n\t\t\t\t\t\t});\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t\tframe.querySelectorAll(\"[data-lab-file]\").forEach((f, i) => { f.hidden = i !== 0; });\n\t\t\t\tconst firstTab = frame.querySelector(\"[data-lab-tab]\");\n\t\t\t\tif (firstTab) firstTab.classList.add(\"on\");\n\t\t\t\tprogress();\n\t\t\t})();\n\t\t</script><script>\n\t\t\t\t// Site search: the index is generated at build time (search/index.json),\n\t\t\t\t// so this is a fetch plus a rank — no search service, no Node. Ranking is\n\t\t\t\t// fuzzy: exact substring matches first, then subsequence matches with\n\t\t\t\t// bonuses for consecutive hits and word starts (\"col\" finds collection).\n\t\t\t\t(() => {\n\t\t\t\t\tconst input = document.getElementById(\"site-search\");\n\t\t\t\t\tconst box = document.getElementById(\"search-results\");\n\t\t\t\t\tif (!input || !box) return;\n\t\t\t\t\tlet index = null;\n\n\t\t\t\t\tconst load = async () => {\n\t\t\t\t\t\tif (!index) index = await (await fetch(input.dataset.index)).json();\n\t\t\t\t\t\treturn index;\n\t\t\t\t\t};\n\n\t\t\t\t\tconst score = (hay, q) => {\n\t\t\t\t\t\tlet total = 0, from = 0, prev = -2, streak = 0;\n\t\t\t\t\t\tfor (let i = 0; i < q.length; i++) {\n\t\t\t\t\t\t\tlet found = -1;\n\t\t\t\t\t\t\tfor (let j = from; j < hay.length; j++) {\n\t\t\t\t\t\t\t\tif (hay[j] === q[i]) { found = j; break; }\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tif (found < 0) return -1;\n\t\t\t\t\t\t\tstreak = found === prev + 1 ? streak + 1 : 0;\n\t\t\t\t\t\t\tif (i === 0 || hay[found - 1] === \" \" || hay[found - 1] === \"/\") total += 2;\n\t\t\t\t\t\t\ttotal += 1 + streak;\n\t\t\t\t\t\t\tfrom = found + 1;\n\t\t\t\t\t\t\tprev = found;\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn total;\n\t\t\t\t\t};\n\n\t\t\t\t\tconst render = (entries) => {\n\t\t\t\t\t\tbox.innerHTML = \"\";\n\t\t\t\t\t\tfor (const e of entries.slice(0, 8)) {\n\t\t\t\t\t\t\tconst a = document.createElement(\"a\");\n\t\t\t\t\t\t\ta.href = input.dataset.prefix + e.path;\n\t\t\t\t\t\t\tconst t = document.createElement(\"span\");\n\t\t\t\t\t\t\tt.className = \"search-hit-title\";\n\t\t\t\t\t\t\tt.textContent = e.title;\n\t\t\t\t\t\t\ta.appendChild(t);\n\t\t\t\t\t\t\tif (e.description) {\n\t\t\t\t\t\t\t\tconst d = document.createElement(\"span\");\n\t\t\t\t\t\t\t\td.className = \"search-hit-desc\";\n\t\t\t\t\t\t\t\td.textContent = e.description;\n\t\t\t\t\t\t\t\ta.appendChild(d);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tbox.appendChild(a);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbox.hidden = entries.length === 0;\n\t\t\t\t\t};\n\n\t\t\t\t\tinput.addEventListener(\"input\", async () => {\n\t\t\t\t\t\tconst q = input.value.trim().toLowerCase();\n\t\t\t\t\t\tif (q.length < 2) { box.hidden = true; return; }\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst all = await load();\n\t\t\t\t\t\t\tconst hits = all.map((e) => {\n\t\t\t\t\t\t\t\tconst title = (e.title || \"\").toLowerCase();\n\t\t\t\t\t\t\t\tconst full = (title + \" \" + (e.description || \"\") + \" \" + (e.headings || \"\")).toLowerCase();\n\t\t\t\t\t\t\t\tconst sTitle = score(title, q);\n\t\t\t\t\t\t\t\tconst sFull = score(full, q);\n\t\t\t\t\t\t\t\tconst rank = (sTitle < 0 ? 0 : sTitle * 3) + (sFull < 0 ? 0 : sFull);\n\t\t\t\t\t\t\t\treturn { e, rank, exact: full.includes(q) };\n\t\t\t\t\t\t\t}).filter((h) => h.rank > 0)\n\t\t\t\t\t\t\t\t.sort((a, b) => (b.exact - a.exact) || (b.rank - a.rank))\n\t\t\t\t\t\t\t\t.map((h) => h.e);\n\t\t\t\t\t\t\trender(hits);\n\t\t\t\t\t\t} catch { box.hidden = true; }\n\t\t\t\t\t});\n\t\t\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\t\t\tif (!e.target.closest(\".search\")) box.hidden = true;\n\t\t\t\t\t});\n\t\t\t\t\tdocument.addEventListener(\"keydown\", (e) => {\n\t\t\t\t\t\t// \"/\" focuses the search box from anywhere; Escape closes it.\n\t\t\t\t\t\tif (e.key === \"/\" && !e.target.closest(\"input, textarea, select\")) {\n\t\t\t\t\t\t\te.preventDefault();\n\t\t\t\t\t\t\tinput.focus();\n\t\t\t\t\t\t\tinput.select();\n\t\t\t\t\t\t} else if (e.key === \"Escape\") {\n\t\t\t\t\t\t\tbox.hidden = true;\n\t\t\t\t\t\t\tinput.blur();\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script><script>\n\t\t\t\t// The language dropdown navigates to the other locale's version of\n\t\t\t\t// this page — the URLs come from Ctx.InLocale at build time.\n\t\t\t\t(() => {\n\t\t\t\t\tconst sel = document.getElementById(\"lang-select\");\n\t\t\t\t\tif (!sel) return;\n\t\t\t\t\tsel.addEventListener(\"change\", () => {\n\t\t\t\t\t\tif (sel.value) window.location.href = sel.value;\n\t\t\t\t\t});\n\t\t\t\t})();\n\t\t\t</script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

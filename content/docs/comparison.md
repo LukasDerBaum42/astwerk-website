@@ -1,8 +1,8 @@
 +++
 Title = "Comparison"
-Description = "How astwerk differs from Hugo, Zola, Eleventy and Astro — and when one of those is the better choice."
-Order = 15
-Group = "Start here"
+Description = "How astwerk differs from Hugo, Zola, Eleventy, Astro and Svelte — and when one of those is the better choice."
+Order = 30
+Group = "Introduction"
 +++
 
 This is a static-site generator among many. The honest comparison is against
@@ -17,19 +17,21 @@ type-checked at compile time, the site's structure should live in code rather
 than a directory convention, and interactivity shouldn't pull in a JavaScript
 toolchain. Choose Hugo, Zola, Eleventy or Astro when you want a theme
 ecosystem, a component framework for islands, or builds at a scale where
-incremental compilation matters.
+incremental compilation matters. Choose Svelte when you want compile-time
+reactivity — the idea astwerk's `x` is built on — but the component layer in
+JavaScript/TypeScript.
 
 ## At a glance
 
-| | astwerk | Hugo | Zola | Eleventy | Astro |
-| --- | --- | --- | --- | --- | --- |
-| Language | Go | Go | Rust | JS/Node | JS/Node |
-| Templates | templ (compiled Go) | Go `html/template` | Tera | Nunjucks/Liquid/JS | `.astro` (JSX-like) |
-| Site structure | a `Node` tree you write | convention: `content/` + `layouts/` | convention: `content/` + `templates/` | convention + config | file-based routing in `src/pages` |
-| Content discovery | explicit, via `Generate` | directory scan | directory scan | directory scan | directory scan |
-| Client JS | Go → WASM, opt-in | none built in | none built in | none built in | islands, any framework |
-| Config format | none — Go struct literals | TOML/YAML/JSON | TOML | JS/JSON | JS/TS |
-| Toolchain | `go` + `templ` CLI | single binary | single binary | Node + npm | Node + npm |
+| | astwerk | Hugo | Zola | Eleventy | Astro | Svelte |
+| --- | --- | --- | --- | --- | --- | --- |
+| Language | Go | Go | Rust | JS/Node | JS/Node | JS/TS |
+| Templates | templ (compiled Go) | Go `html/template` | Tera | Nunjucks/Liquid/JS | `.astro` (JSX-like) | `.svelte` (compiled) |
+| Site structure | a `Node` tree you write | convention: `content/` + `layouts/` | convention: `content/` + `templates/` | convention + config | file-based routing in `src/pages` | SvelteKit routes in `src/routes` |
+| Content discovery | explicit, via `Generate` | directory scan | directory scan | directory scan | directory scan | SvelteKit load functions |
+| Client JS | Go → WASM, opt-in | none built in | none built in | none built in | islands, any framework | compiled at build time, no runtime framework |
+| Config format | none — Go struct literals | TOML/YAML/JSON | TOML | JS/JSON | JS/TS | `svelte.config.js` |
+| Toolchain | `go` + `templ` CLI | single binary | single binary | Node + npm | Node + npm | Node + npm/Vite |
 
 ## Where astwerk is a good fit
 
@@ -54,6 +56,66 @@ build step. astwerk's interactive paths are [`x`](../x/) — compiled markup,
 plain JavaScript at build time, no framework at all — and `reactive`, Go
 compiled to WASM: one language, one toolchain, no `npm install` divergence
 between the static and interactive halves of a page.
+
+### astwerk vs Astro
+
+Astro is the closest philosophical peer — HTML-first, islands, zero-JS by
+default — so the contrast is the sharpest:
+
+| | Astro | astwerk |
+| --- | --- | --- |
+| Default output | HTML-first | HTML-first |
+| Islands | JS islands (React, Vue, Svelte…) | compiled Go/JS islands (`x`), or Go/WASM (`reactive`) |
+| Toolchain | Node ecosystem | Go ecosystem |
+| Templates | `.astro` (JSX-like) | templ (compiled Go, type-checked) |
+| Site structure | file-based routing in `src/pages` | a `Node` tree you write |
+
+Choose Astro when you want component-level islands across multiple UI
+frameworks in one project. Choose astwerk when the team already writes Go and
+the interactive half of the page should not bring a JS framework's build step
+with it.
+
+### astwerk vs Svelte
+
+Svelte is the closest relative of astwerk's [`x`](../x/) package — and its
+inspiration. Both decided the same thing: reactivity is a compile-time problem,
+so ship the compiler's output instead of a framework. The difference is where
+the compiler lives and what it compiles.
+
+| | Svelte | astwerk `x` |
+| --- | --- | --- |
+| Reactivity | compiled at build time | compiled at build time |
+| Runtime | a small runtime, no virtual DOM | per-page fragments, no virtual DOM |
+| Components | `.svelte` files, a component syntax | ordinary Go functions in templ |
+| Language | JavaScript/TypeScript | Go |
+| Toolchain | Node + Vite/SvelteKit | `go` + the templ CLI |
+
+Svelte compiles a component file into vanilla JavaScript; `x` compiles the
+markers a page actually uses into a small script — assembled per page from
+fragments, and only when a page opts in with `x.Document`. Both are answers to
+"why ship a framework when the compiler can do the work?" The difference is
+that astwerk keeps the whole stack in one language: no `.svelte` file format,
+no second ecosystem, no Node toolchain joining the build. Choose Svelte when
+the component layer should live in JavaScript/TypeScript with its own
+ecosystem; choose astwerk when it should be Go, inside your existing templ
+components.
+
+## The deliberate absences
+
+astwerk doesn't have these things, and that's a decision, not a gap:
+
+- **No config file** — Go struct literals are the configuration. There is no
+  format to learn and no schema to look up.
+- **No conventions** — nothing is discovered. You write the tree, so there is
+  no framework assumption to fight when a site deviates.
+- **No plugins** — extensibility is Go. A custom generator is a function, not
+  an interface to implement and a registry to register in.
+- **No themes** — there is a folder of files you copy and edit. No marketplace,
+  no inheritance, no update breaking your customizations.
+- **No virtual DOM** — bindings patch one property at a time, so nothing is
+  ever destroyed and rebuilt behind your back.
+- **No Node.js** — the toolchain is `go` plus the templ CLI, and that's the
+  whole toolchain.
 
 ## Where something else is the better choice
 
@@ -80,6 +142,13 @@ multiple UI frameworks in one project.** That's Astro's specific strength —
 mixing React, Svelte and Vue islands on one page — and it isn't something
 astwerk is trying to do. `reactive` is one small, fine-grained state library,
 not a place to plug in an existing component framework.
+
+**You want compile-time reactivity but the component layer in JavaScript.**
+That is Svelte's exact pitch — and the idea astwerk's `x` was built on. If the
+team is JS/TS-first and wants the component ecosystem around it (SvelteKit,
+stores, transitions), Svelte is the better choice; if the components should be
+Go functions inside templ, astwerk keeps the whole stack in one language —
+see [astwerk vs Svelte](#astwerk-vs-svelte) above.
 
 **You need incremental/parallel builds for a very large site (10k+ pages).**
 Hugo in particular is tuned hard for this. astwerk's walker is a straightforward

@@ -44,7 +44,7 @@ when a workspace is redirecting the code to a sibling checkout.
 Bumping to a new release is the ordinary thing:
 
 ```bash
-go get github.com/LukasDerBaum42/astwerk@v0.6.0
+go get github.com/LukasDerBaum42/astwerk@v0.8.0
 go mod tidy
 ```
 
@@ -74,7 +74,8 @@ and page bodies in their own package.
 | `templates/` | the shell — `Layout`, `CodeBlock`, `WasmScript`, `NavItem` |
 | `pages/` | page bodies — `Home`, `DocPage`, `DocsIndex`, `Examples`, `NotFound` |
 | `content/docs/*.md` | the documentation, ordered by `Order` in front matter |
-| `scripts/demo.go` | the live demos, compiled to wasm by `CompileFrom` |
+| `scripts/` | the wasm programs — `demo/`, `router_demo/`, `bridge_demo/`, `tutorial_game.go` — compiled by `CompileFrom` |
+| `scripts/game/` | the tutorial game's pure-Go ledger, host-tested (`go test ./scripts/game`) |
 | `style/style.css` | hand-written, no preprocessor |
 | `style/code.css` | **generated** — see below |
 | `tools/gencss` | regenerates `style/code.css` from chroma |

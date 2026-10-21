@@ -1,8 +1,8 @@
 +++
 Title = "wasmwrap"
 Description = "syscall/js made to feel like Go: DOM, style, events, fetch."
-Order = 55
-Group = "Client-side"
+Order = 140
+Group = "Add interactivity"
 +++
 
 `syscall/js` works, but every call is a stringly-typed `js.Value.Call` and
@@ -179,7 +179,7 @@ missing element is inert rather than a panic three calls later.
 
 package main
 
-import "github.com/LukasDerBaum42/astwerk/wasmwrap"
+import "github.com/LukasDerBaum42/astwerk-live/wasmwrap"
 
 func main() {
 	nav := wasmwrap.Query("#nav")

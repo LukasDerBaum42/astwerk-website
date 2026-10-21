@@ -1,0 +1,174 @@
+package tutorial
+
+import (
+	"fmt"
+)
+
+// The step rail and the step lab (06-step-lab.md): the quest's micro-step
+// navigation and its editable "whole change" frame. The rail's steps are the
+// objectives — each maps to its content section (questSection) through the
+// shared data-scroll-to table the quest track and the hub's mirrors use — so
+// stepping scrolls to the section each objective teaches.
+
+// stepRail is the quest's micro-step bar: the objectives as numbered steps,
+// Prev/Next scrolling and pulsing, the dots filled as each objective ticks.
+// It is vanilla — the objective boxes are its state, so it works without
+// wasm; the shell restores boxes on revisit and both agree. The steps are the
+// content sections (questSection), so stepping scrolls to the section each
+// objective teaches and marks it current/done as the player works.
+templ stepRail(id string) {
+	<div class="step-rail" data-rail data-quest={ id }>
+		<p class="rail-label" data-rail-label></p>
+		<div class="rail-controls">
+			<button type="button" class="rail-btn" data-rail-prev>&#9664; Prev</button>
+			<div class="rail-dots" data-rail-dots aria-hidden="true"></div>
+			<button type="button" class="rail-btn" data-rail-next>Next &#9654;</button>
+		</div>
+	</div>
+	<script>
+		(() => {
+			const rail = document.querySelector("[data-rail]");
+			if (!rail) return;
+			const label = rail.querySelector("[data-rail-label]");
+			const dots = rail.querySelector("[data-rail-dots]");
+			const prev = rail.querySelector("[data-rail-prev]");
+			const next = rail.querySelector("[data-rail-next]");
+
+			let at = 0;
+			let steps = [];
+
+			const pulse = (el) => {
+				el.classList.remove("pulse");
+				void el.offsetWidth;
+				el.classList.add("pulse");
+				setTimeout(() => el.classList.remove("pulse"), 1200);
+			};
+
+			// The step's section: the content the objective teaches. The scroll
+			// table is shared with the quest track and the hub's mirrors.
+			const sectionOf = (el) => {
+				const sel = el.dataset.scrollTo;
+				return sel ? document.querySelector(sel) : null;
+			};
+			const nameOf = (el) => {
+				const sec = sectionOf(el);
+				const t = sec && sec.querySelector(".quest-section-title");
+				if (t) return t.textContent.trim();
+				const row = el.closest("li") && el.closest("li").querySelector(".quest-track-text");
+				return row ? row.textContent.trim() : "objective " + (steps.indexOf(el) + 1);
+			};
+
+			const scrollTo = (el) => {
+				const target = sectionOf(el);
+				if (!target) return;
+				target.scrollIntoView({ behavior: "smooth", block: "center" });
+				pulse(target);
+			};
+
+			const render = () => {
+				steps = Array.from(document.querySelectorAll("[data-objective]"));
+				if (!steps.length) {
+					rail.hidden = true;
+					return;
+				}
+				rail.hidden = false;
+				at = Math.min(at, steps.length - 1);
+				dots.innerHTML = steps.map((s, i) =>
+					'<span class="rail-dot' + (s.checked ? " on" : "") + '"></span>'
+				).join("");
+				// The sections mirror the step state: done once its objective is
+				// ticked, current where the player is.
+				document.querySelectorAll("[data-quest-section]").forEach((s) => {
+					s.classList.remove("done", "current");
+				});
+				steps.forEach((s, i) => {
+					const sec = sectionOf(s);
+					if (sec && s.checked) sec.classList.add("done");
+				});
+				const cur = sectionOf(steps[at]);
+				if (cur) cur.classList.add("current");
+				label.textContent = "Step " + (at + 1) + " of " + steps.length + " · " + nameOf(steps[at]);
+				prev.disabled = at === 0;
+				next.disabled = at === steps.length - 1;
+			};
+
+			const advance = () => {
+				const i = steps.findIndex((s) => !s.checked);
+				if (i >= 0) at = i;
+				render();
+			};
+
+			prev.addEventListener("click", () => {
+				if (at <= 0) return;
+				at--;
+				render();
+				scrollTo(steps[at]);
+			});
+			next.addEventListener("click", () => {
+				if (at >= steps.length - 1) return;
+				at++;
+				render();
+				scrollTo(steps[at]);
+			});
+			document.addEventListener("change", (e) => {
+				if (e.target.matches && e.target.matches("[data-objective]")) advance();
+			});
+			// After the shell restores the boxes from the save, jump to the first
+			// step still to do — "where am I and what's next" on a revisit.
+			document.addEventListener("astwerk:restore", advance);
+			// The quest track renders after this script — the objective boxes do
+			// not exist yet. Defer the first render until the DOM is parsed.
+			const boot = () => {
+				render();
+				if (!steps.length) return;
+				const first = steps.findIndex((s) => !s.checked);
+				if (first >= 0) at = first;
+				render();
+			};
+			if (document.readyState === "loading") {
+				document.addEventListener("DOMContentLoaded", boot);
+			} else {
+				boot();
+			}
+		})();
+	</script>
+}
+
+// stepLab is the quest's step lab: the whole change rendered as an editable
+// frame. The checker itself ships in templates/layout.templ next to the quiz
+// script (same pattern: vanilla, keyed off data attributes, dispatches
+// astwerk:lab); this component emits the frame — the file tabs, the numbered
+// lines with their inline slot inputs, the expected-result strip and the
+// honesty note.
+templ stepLab(id string) {
+	if labSlots(labSpecs[id]) == 0 {
+		return
+	}
+	<div class="step-lab" data-lab data-lab-quest={ id } data-lab-slots={ fmt.Sprintf("%d", labSlots(labSpecs[id])) }>
+		<header class="lab-head">
+			<p class="lab-title">STEP LAB<span class="lab-honesty">checks what your code would make — the tutorial can&rsquo;t compile Go in your browser, but it can check your work</span></p>
+			<span class="lab-progress" data-lab-progress>0/{ fmt.Sprintf("%d", labSlots(labSpecs[id])) } slots</span>
+			if len(labSpecs[id].Files) > 1 {
+				<div class="lab-tabs">
+					for _, f := range labSpecs[id].Files {
+						<button type="button" class="lab-tab" data-lab-tab={ f.Name }>{ f.Name }</button>
+					}
+				</div>
+			}
+			<div class="lab-actions">
+				<button type="button" class="lab-btn" data-lab-peek>Peek</button>
+				<button type="button" class="lab-btn" data-lab-reset>Reset</button>
+				<button type="button" class="lab-btn primary" data-lab-check>Check</button>
+			</div>
+		</header>
+		<div class="lab-files">
+			for _, f := range labSpecs[id].Files {
+				<div class="lab-file" data-lab-file={ f.Name } data-lab-order-file?={ f.Mode == "order" }>
+					@templ.Raw(labFileHTML(f))
+					<p class="lab-result" data-result>Expected result: { f.Result }</p>
+					<p class="lab-verdict" data-verdict aria-live="polite"></p>
+				</div>
+			}
+		</div>
+	</div>
+}

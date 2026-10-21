@@ -1,8 +1,8 @@
 +++
 Title = "Scripts & WebAssembly"
 Description = "Compiling Go to wasm as part of the build, with no JS toolchain."
-Order = 50
-Group = "Client-side"
+Order = 130
+Group = "Add interactivity"
 +++
 
 A node with `CompileFrom` compiles a scripts directory into the output. No
@@ -100,7 +100,7 @@ logic is substantial enough that writing it in Go pays for the runtime.
 
 package main
 
-import "github.com/LukasDerBaum42/astwerk/wasmwrap"
+import "github.com/LukasDerBaum42/astwerk-live/wasmwrap"
 
 func main() {
 	wasmwrap.Query("#toggle").On("click", func(e wasmwrap.Event) {

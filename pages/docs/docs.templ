@@ -1,0 +1,91 @@
+package docs
+
+import (
+	"github.com/LukasDerBaum42/astwerk-website/templates"
+	"github.com/LukasDerBaum42/astwerk/ssg"
+)
+
+// DocPage renders one documentation page.
+//
+// body is HTML that goldmark already produced from markdown, so it goes through
+// templ.Raw rather than being escaped.
+templ DocPage(c ssg.Ctx, sidebar []templates.NavGroup, description string, body string, prev, next *templates.NavItem) {
+	@templates.Layout(c, sidebarTitle(c), sidebar, nil) {
+		<article class="prose">
+			<h1>{ c.Title }</h1>
+			if description != "" {
+				<p class="lede">{ description }</p>
+			}
+			@templ.Raw(body)
+		</article>
+		<nav class="pager">
+			if prev != nil {
+				<a class="prev" href={ c.Link(prev.Path) }>
+					<span>Previous</span>{ prev.Label }
+				</a>
+			}
+			if next != nil {
+				<a class="next" href={ c.Link(next.Path) }>
+					<span>Next</span>{ next.Label }
+				</a>
+			}
+		</nav>
+	}
+}
+
+// DocsIndex lists every documentation page as a card, with its summary.
+templ DocsIndex(c ssg.Ctx, sidebar []templates.NavGroup, entries []DocSummary) {
+	@templates.Layout(c, sidebarTitle(c), sidebar, nil) {
+		<article class="prose">
+			<h1>{ sidebarTitle(c) }</h1>
+			<p class="lede">
+				New here? Start with <a href={ c.Link("docs/how-astwerk-thinks/") }>How
+				astwerk thinks</a> — the whole architecture on one page — then
+				<a href={ c.Link("docs/getting-started/") }>Getting started</a> to build
+				your first site. When you hit a widget decision,
+				<a href={ c.Link("docs/which-tool/") }>Which tool do I use?</a> is the
+				shortcut. The <a href={ c.Link("docs/quick-reference/") }>Quick
+				reference</a> is the whole API on one page.
+			</p>
+			<div class="cards">
+				for _, e := range entries {
+					@docCard(e.Title, e.Description, c.Link(e.Path))
+				}
+			</div>
+		</article>
+	}
+}
+
+// docCard is one entry in the docs index.
+templ docCard(title string, body string, href string) {
+	<a class="card" href={ href }>
+		<h3>{ title }</h3>
+		<p>{ body }</p>
+	</a>
+}
+
+// sidebarTitle is the sidebar's heading — locale-aware, because the shell is
+// translated even where the page content still falls back to English.
+func sidebarTitle(c ssg.Ctx) string {
+	if c.Locale == "de" {
+		return "Dokumentation"
+	}
+	return "Documentation"
+}
+
+// DocSummary is one entry in the docs index.
+type DocSummary struct {
+	Title       string
+	Description string
+	Path        string
+}
+
+templ NotFound(c ssg.Ctx) {
+	@templates.Layout(c, "", nil, nil) {
+		<article class="prose">
+			<h1>404</h1>
+			<p>That page doesn't exist.</p>
+			<p><a href={ c.Link("") }>Back to the home page</a></p>
+		</article>
+	}
+}

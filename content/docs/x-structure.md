@@ -1,8 +1,8 @@
 +++
 Title = "x — structure & scripts"
 Description = "Conditional and keyed subtrees, effects, and the JavaScript escape hatch."
-Order = 46
-Group = "Client-side"
+Order = 120
+Group = "Add interactivity"
 +++
 
 The markers that change the document's structure or run code of their own:
@@ -28,7 +28,7 @@ templ, so its content is raw — no escaping, no quoting.
 ### When
 
 ```templ
-@x.El("button", x.On("click", open.Set(x.Not(open)))) {
+@x.El("button", x.On("click", open.Toggle())) {
 	toggle
 }
 @x.When(open, secretBody())
@@ -45,6 +45,13 @@ input focus, scroll position or transient state inside is discarded. If the
 subtree only needs to appear and disappear — a panel, a dropdown — `Show` keeps
 the same nodes and only toggles visibility, so state survives.
 
+That cuts both ways: an entrance animation on every mount is fine, because the
+subtree is fresh anyway — but the animation must respect
+`prefers-reduced-motion`. The site-wide rule is that reduced motion collapses
+animations to instant state changes: drive the transition with a class toggle
+and let the stylesheet's reduced-motion block handle the rest, rather than
+animating in JavaScript.
+
 </details>
 
 ### List
@@ -55,8 +62,8 @@ type Todo struct {
 	Text string `json:"text"`
 }
 
-var todos = x.Named("todos", []Todo{{ID: "1", Text: "Read the docs"}})
-var draft = x.Named("draft", "")
+var todos = x.NamedListSignal("todos", []Todo{{ID: "1", Text: "Read the docs"}})
+var draft = x.NamedStrSignal("draft", "")
 ```
 
 ```templ
@@ -122,8 +129,8 @@ type Todo struct {
 	Text string `json:"text"`
 }
 
-var todos = x.Named("todos", []Todo{{ID: "1", Text: "Read the docs"}})
-var draft = x.Named("draft", "")
+var todos = x.NamedListSignal("todos", []Todo{{ID: "1", Text: "Read the docs"}})
+var draft = x.NamedStrSignal("draft", "")
 ```
 
 ```templ
@@ -152,4 +159,4 @@ templ todo() {
 
 A keyed list fed by a two-way input, with the script escape hatch doing the one
 thing combinators can't: appending to the array. The same widget ships in
-`starter/widgets/todo.templ`.
+`astwerk-live/starter/widgets/todo.templ`.

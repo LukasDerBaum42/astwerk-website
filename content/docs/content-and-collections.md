@@ -1,8 +1,8 @@
 +++
 Title = "Content & collections"
 Description = "Markdown with TOML front matter, and the list-plus-detail pattern."
-Order = 30
-Group = "Content & i18n"
+Order = 80
+Group = "Add content"
 +++
 
 The `content` package reads markdown files with TOML front matter. Combined with
@@ -112,6 +112,52 @@ interface.
 
 </details>
 
+### Collection
+
+`LoadDir + Decode + Slugs + Generate` is the repeating pattern, so it's
+abstracted once: a `Collection[T]` is a loaded set of pages whose front matter
+is decoded into your type, sorted by slug by default.
+
+```go
+posts, err := content.LoadCollection[Post]("content/posts")
+```
+
+The methods return new collections rather than mutating, so they chain —
+filter drafts, sort by date, take a page at a time:
+
+```go
+latest := posts.Filter(func(it content.Item[Post]) bool {
+	return !it.Meta.Draft
+}).Sort(func(a, b content.Item[Post]) bool {
+	return a.Meta.Date.After(b.Meta.Date)
+})
+```
+
+And `Nodes` turns the collection into one `ssg.Node` per item, keyed by slug,
+ready for `Generate`:
+
+```go
+"blog": {Generate: func() map[string]ssg.Node {
+	return latest.Nodes(func(c ssg.Ctx, it content.Item[Post]) templ.Component {
+		return views.Post(c, it)
+	})
+}},
+```
+
+`Nodes` returns the same `map[string]ssg.Node` `Generate` uses, so it composes
+with hand-written nodes — one odd item can still be built by hand and merged
+into the result.
+
+<details>
+<summary>What Collection does under the hood</summary>
+
+A collection is a thin layer over the primitives on this page: `LoadDir`
+loads, `Decode` reads each page's front matter into `T`, `Slugs` keeps the
+order deterministic, and `Nodes` is the `Generate` loop at the bottom of this
+page. The primitives stay public — reach for them when a site needs to deviate.
+
+</details>
+
 ### Chunk
 
 ```go
@@ -170,6 +216,11 @@ pages, err := content.NewLoader(md).LoadDir("content/docs")
 
 The docs you're reading are rendered exactly that way — highlighting happens at
 build time via chroma, so no JavaScript highlighter ships to the browser.
+
+**Raw HTML passes through unsanitized.** goldmark doesn't filter it, so a
+markdown file can drop into markup — and untrusted content can inject it. Only
+enable raw HTML for content you control, and treat `SetHTML`-style output the
+same way: never feed user input through it unescaped.
 
 ## Example
 

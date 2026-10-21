@@ -1,8 +1,8 @@
 +++
 Title = "reactive — state"
 Description = "Signals, effects, computed values and ownership — the state model behind the bindings."
-Order = 60
-Group = "Client-side"
+Order = 160
+Group = "Add interactivity"
 +++
 
 `reactive` is opt-in state management on top of `wasmwrap`, fine-grained rather
@@ -16,12 +16,18 @@ The lightweight path is [`x`](../x/): the same reactive model, compiled to plain
 JavaScript at build time, with no WASM and no framework. See both running on the
 [Examples](../../examples/) page.
 
+State comes in **split types** — `Num`, `Bool`, `Str`, `List` — one
+constructor per value kind, so a `BoolSignal` has no `Inc()` and a `NumSignal`
+has no `Toggle()`: what compiles is what is meaningful. The generic
+`Signal[T]` stays exported for the cases where `T` is genuinely arbitrary — a
+[`Resource`](../reactive-router/)'s `Data` or `Err` field, say.
+
 ## Documentation
 
 ### Signal
 
 ```go
-count := reactive.NewSignal(0)
+count := reactive.Num(0)
 
 count.Get()    // read — subscribes if inside an Effect
 count.Peek()   // read without subscribing
@@ -30,7 +36,9 @@ count.Update(func(v int) int { return v + 1 })
 ```
 
 `Set` compares against the current value and does nothing if they're equal, so a
-redundant write wakes nobody.
+redundant write wakes nobody. Each split type adds the methods its kind makes
+sense for — `Inc`/`Dec` on a `NumSignal`, `Toggle` on a `BoolSignal` — and every
+kind keeps the general `Set(v)` and `Update(fn)`.
 
 ### Subscribe
 
@@ -108,7 +116,7 @@ full := reactive.Computed(func() string {
 full.Get() // "Ada Lovelace"
 ```
 
-`Computed` returns a `*Memo[T]` — a signal whose value is derived from other
+`Computed` returns a `*Memo[T]` — a value derived from other
 signals. It recomputes when its inputs change and is itself trackable, so
 derived values chain. If the recomputed value equals the previous one,
 downstream effects don't run.
@@ -148,7 +156,7 @@ the effects it triggers run on that goroutine.
 ## Example
 
 ```go
-count := reactive.NewSignal(0)
+count := reactive.Num(0)
 doubled := reactive.Computed(func() int { return count.Get() * 2 })
 
 reactive.Effect(func() {

@@ -1,0 +1,34 @@
+package templates
+
+// Piece is one step of a walkthrough — the examples pages' and the clicker
+// line's shared "here's the code, here's what it does" block: a heading, its
+// snippet, and the explanation as children.
+templ Piece(title string, src string) {
+	<h3>{ title }</h3>
+	@CodeBlock(src)
+	{ children... }
+}
+
+// PieceTempl is Piece with templ highlighting, for the compiled-markup demos.
+templ PieceTempl(title string, src string) {
+	<h3>{ title }</h3>
+	@CodeBlockTempl(src)
+	{ children... }
+}
+
+// FullSource hides the complete copyable file behind a collapsible — the
+// walkthrough above shows the parts, this is the whole thing.
+templ FullSource(src string) {
+	<details>
+		<summary>Full source</summary>
+		@CodeBlock(src)
+	</details>
+}
+
+// FullSourceTempl is FullSource with templ highlighting.
+templ FullSourceTempl(src string) {
+	<details>
+		<summary>Full source</summary>
+		@CodeBlockTempl(src)
+	</details>
+}

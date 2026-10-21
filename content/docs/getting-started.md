@@ -1,8 +1,8 @@
 +++
 Title = "Getting started"
 Description = "Install astwerk, write a tree, generate a site."
-Order = 10
-Group = "Start here"
+Order = 40
+Group = "Build a site"
 +++
 
 astwerk generates a static site from a Go program. You describe the output
@@ -10,12 +10,20 @@ directory as a tree of `Node`s; `Build` walks the tree and writes files.
 Templates are [templ](https://templ.guide) components — real Go, type-checked
 at compile time.
 
-For a step-by-step walkthrough, see the [Build a site](../../tutorial/)
-tutorial.
+New here? Read [How astwerk thinks](../how-astwerk-thinks/) first — it's the
+whole architecture on one page. For a step-by-step walkthrough, see the
+[Build a site](../../tutorial/) tutorial.
+
+## Requirements
+
+- **Go 1.27 or newer** — the `go` toolchain is the build system.
+- **The templ CLI** — compiles `.templ` files to Go. That's the whole
+  toolchain: no Node.js, no bundler, no plugin system.
+- **An evergreen browser** for the interactive paths: `x` needs JavaScript
+  (the page works without it, it just doesn't update), and `reactive` needs a
+  browser that supports WebAssembly.
 
 ## Install
-
-Requires Go 1.25 or newer.
 
 ```sh
 go get github.com/LukasDerBaum42/astwerk

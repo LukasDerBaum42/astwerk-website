@@ -1,8 +1,8 @@
 +++
 Title = "Dev server"
 Description = "Watch, rebuild, reload — the loop you leave running while you work."
-Order = 25
-Group = "Start here"
+Order = 70
+Group = "Build a site"
 +++
 
 `go run .` builds the site once. While you work you want that on a loop — edit a

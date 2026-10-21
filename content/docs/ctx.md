@@ -1,8 +1,8 @@
 +++
 Title = "Ctx & URLs"
 Description = "What the walker tells a page — paths, locale, base — and how to build URLs from it."
-Order = 22
-Group = "Start here"
+Order = 60
+Group = "Build a site"
 +++
 
 Every page is a function of a `Ctx` describing where the page lives. URL

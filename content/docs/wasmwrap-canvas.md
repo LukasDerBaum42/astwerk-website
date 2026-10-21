@@ -1,8 +1,8 @@
 +++
 Title = "wasmwrap — canvas"
 Description = "Typed 2D drawing — Canvas, Ctx2D, animation loops."
-Order = 56
-Group = "Client-side"
+Order = 150
+Group = "Add interactivity"
 +++
 
 The one place `wasmwrap` adds a real API surface: 2D drawing with typed calls
@@ -95,6 +95,12 @@ cancel := ctx.RequestAnimationFrame(func(dt float64) {
 reschedules itself and hands you the delta in seconds. The `cancel` it returns
 stops the loop.
 
+A draw loop runs its own animation, outside the stylesheet, so the site-wide
+`prefers-reduced-motion` rule cannot collapse it. Canvas demos must check the
+media query at boot themselves and draw a single static frame instead of
+starting the loop when it matches — the same rule the site's own canvas demos
+follow.
+
 ## Example
 
 ```go
@@ -105,7 +111,7 @@ package main
 import (
 	"math"
 
-	"github.com/LukasDerBaum42/astwerk/wasmwrap"
+	"github.com/LukasDerBaum42/astwerk-live/wasmwrap"
 )
 
 func main() {

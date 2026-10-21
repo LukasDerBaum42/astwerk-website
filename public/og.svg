@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="astwerk — a Go-first static web framework">
+  <title>astwerk — a Go-first static web framework</title>
+  <defs>
+    <style>
+      /* The OG image is standalone, so the palette is self-contained here —
+         the same dark theme and indigo accent style/style.css defines. */
+      :root {
+        --bg: #0f1117;
+        --bg-raised: #171a22;
+        --fg: #e8ebf2;
+        --muted: #9aa3b5;
+        --accent: #7c8cff;
+        --line: #272c3a;
+      }
+    </style>
+  </defs>
+  <rect width="1200" height="630" fill="var(--bg)"/>
+  <!-- A soft glow behind the tree, echoing the accent. -->
+  <circle cx="600" cy="330" r="260" fill="var(--accent)" opacity="0.08"/>
+
+  <!-- The hero tree: build/ with about/, style/ and scripts/ beneath it. -->
+  <g stroke="var(--accent)" stroke-width="6" stroke-linecap="round" fill="none">
+    <path d="M600 560V250"/>
+    <path d="M600 250 300 150"/>
+    <path d="M600 250 900 150"/>
+    <path d="M600 410 900 310"/>
+  </g>
+  <g fill="var(--fg)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="30">
+    <text x="580" y="600">build/</text>
+    <text x="255" y="140">about/</text>
+    <text x="855" y="140">style/</text>
+    <text x="855" y="300">scripts/</text>
+  </g>
+  <g fill="var(--accent)">
+    <circle cx="600" cy="560" r="14"/>
+    <circle cx="300" cy="150" r="14"/>
+    <circle cx="900" cy="150" r="14"/>
+    <circle cx="900" cy="310" r="14"/>
+  </g>
+
+  <text x="600" y="90" text-anchor="middle" fill="var(--fg)"
+        font-family="Inter, system-ui, sans-serif" font-size="72" font-weight="700">astwerk</text>
+  <text x="600" y="145" text-anchor="middle" fill="var(--muted)"
+        font-family="Inter, system-ui, sans-serif" font-size="34">A Go-first static web framework</text>
+</svg>

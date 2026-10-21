@@ -1,0 +1,932 @@
+package tutorial
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/LukasDerBaum42/astwerk-website/templates"
+	"github.com/LukasDerBaum42/astwerk/ssg"
+)
+
+// quizSpec is one quiz's full content: the question, the options, the correct
+// option's index and the explanation. Quizzes live in the quest data — the
+// pages carry only prose, and the shell counts quizzes from the same table
+// the renderer uses, so the totals can never drift from the pages.
+type quizSpec struct {
+	Question string
+	Options  []string
+	Correct  int
+	Why      string
+}
+
+type questSpec struct {
+	Name       string
+	Title      string
+	Flavor     string
+	Objectives []string
+	Quizzes    []quizSpec
+	Bonus      bool
+	Requires   []string // quest ids that must be complete before this one is "available" (07-dependencies.md)
+	Layout     string   // the quest's page composition: "standard" | "lab-first" | "no-lab"
+}
+
+// questSpecs maps quest ids to their quest data. The objectives are the
+// page's checkable list (mirrored in the quest hub and the step rail), the
+// quizzes render as a block under the prose, and the Layout field lets each
+// quest compose the shared components its content needs — not a uniform frame.
+var questSpecs = map[string]questSpec{
+	"blog-1": {Name: "The Seed", Title: "Setup", Flavor: "Every site starts as two lines in a file.", Layout: "lab-first", Objectives: []string{"module created", "dependencies added", "templ CLI on PATH"}, Quizzes: []quizSpec{
+		{Question: "What does the templ CLI do?", Options: []string{"Serves the site in development", "Compiles .templ files into Go", "Downloads the astwerk module"}, Correct: 1, Why: "astwerk pages are templ components; templ generate compiles the .templ files to Go so go run can build the site."},
+		{Question: "What does go get github.com/LukasDerBaum42/astwerk do?", Options: []string{"Installs a global astwerk binary", "Adds astwerk as a dependency in go.mod", "Creates the build directory"}, Correct: 1, Why: "go get records the module as a dependency in go.mod and downloads it. astwerk is a library, not a CLI — you never run it directly."},
+	}},
+	"blog-2": {Name: "The Tree", Title: "The tree", Flavor: "Describe the whole site as one Go value.", Objectives: []string{"the tree", "the first page", "the build output"}, Quizzes: []quizSpec{
+		{Question: "What is a Node?", Options: []string{"One directory in the output, described as a Go value", "A markdown file in the content directory", "A JavaScript module"}, Correct: 0, Why: "ssg.Node describes one output directory — Title, Page, Children and the rest — and ssg.Build walks the tree and writes it."},
+		{Question: "Where does ssg.Templ get a page's path and prefix?", Options: []string{"You pass them in the tree", "The walker fills them in", "templ generates them"}, Correct: 1, Why: "ssg.Templ adapts the (title, path, prefix) signature; the walker knows each page's path and locale and supplies those — you give only the title."},
+	}, Requires: []string{"blog-1"}},
+	"blog-3": {Name: "The Shell", Title: "A layout", Flavor: "The parts every page shares, written once.", Objectives: []string{"the layout", "the stylesheet", "every page wrapped"}, Quizzes: []quizSpec{
+		{Question: "How does a component receive the page's own content?", Options: []string{"As a string parameter", "Through the { children... } mechanism", "From a global variable"}, Correct: 1, Why: "A component declares { children... } and callers wrap it — the page's markup is passed as children."},
+		{Question: "Why does the layout build every link through prefix?", Options: []string{"templ requires it", "So the same layout works in every locale", "To make the output smaller"}, Correct: 1, Why: "A locale subtree renders the same components with prefix set to /de, so links through prefix become /de/… automatically and the layout needs no per-language copy."},
+	}, Bonus: true, Requires: []string{"blog-2"}},
+	"blog-4": {Name: "First Post", Title: "Markdown posts", Flavor: "Content becomes pages at build time.", Objectives: []string{"the post file", "the post page"}, Quizzes: []quizSpec{
+		{Question: "What is the +++ block at the top of a content file?", Options: []string{"YAML front matter", "TOML front matter", "A markdown code fence"}, Correct: 1, Why: "The front matter between +++ markers is TOML, decoded into your own struct with content.Decode; the rest of the file renders as markdown."},
+		{Question: "Why range over content.Slugs instead of the map?", Options: []string{"It is faster", "Map order is random, so the index would reshuffle every build", "Slugs drops pages without front matter"}, Correct: 1, Why: "Go randomises map iteration order; Slugs returns a sorted order so builds are reproducible."},
+	}, Bonus: true, Requires: []string{"blog-2", "blog-3"}},
+	"blog-5": {Name: "The Index", Title: "A collection", Flavor: "One directory in, every page out.", Objectives: []string{"the collection", "the index page"}, Quizzes: []quizSpec{
+		{Question: "What does LoadCollection return?", Options: []string{"A map of pages", "A Collection[T]: items with decoded front matter, sorted by slug", "A slice of strings"}, Correct: 1, Why: "LoadCollection decodes each file's front matter into T and sorts by slug — the items carry Slug, Meta and HTML."},
+		{Question: "What does Nodes return?", Options: []string{"HTML files", "A map[string]ssg.Node keyed by slug, for Generate", "A slice of templ components"}, Correct: 1, Why: "Nodes turns the collection into one ssg.Node per item, keyed by slug — the same map Generate returns, so it composes with hand-written nodes."},
+	}, Bonus: true, Requires: []string{"blog-4"}},
+	"blog-6": {Name: "Order & Chaos", Title: "Tags & pagination", Flavor: "Filter the noise, split the flood.", Objectives: []string{"tag pages", "pagination"}, Quizzes: []quizSpec{
+		{Question: "How do you filter a collection?", Options: []string{"content.Filter(posts)", "posts.Filter(func(it content.Item[Post]) bool { ... })", "A struct tag on Post"}, Correct: 1, Why: "Filter is a method on Collection[T] taking a predicate over Item[T] — it returns a new collection, so it chains with Sort and Chunk."},
+		{Question: "What does Chunk do?", Options: []string{"Compresses the output", "Splits a slice into groups of at most size", "Sorts by date"}, Correct: 1, Why: "Chunk is just the arithmetic — turning the groups into pages is three lines, and every site wants them slightly differently."},
+	}, Bonus: true, Requires: []string{"blog-5"}},
+	"blog-7": {Name: "The Signal Fires", Title: "RSS & sitemap", Flavor: "Tell the world the site exists.", Objectives: []string{"the feed", "the sitemap"}, Quizzes: []quizSpec{
+		{Question: "What is Node.Files for?", Options: []string{"Linking stylesheets", "Writing extra files next to a node's index.html — a feed, a sitemap, a 404", "Storing build options"}, Correct: 1, Why: "Files is the escape hatch for anything that isn't a page: one key per file, rendered at build time."},
+		{Question: "Where do the feed and sitemap end up?", Options: []string{"Inside every page", "At the site root, like any other Files entry on the root node", "In the content directory"}, Correct: 1, Why: "Files on the root node write to the output root — rss.xml and sitemap.xml land beside index.html."},
+	}, Requires: []string{"blog-5"}},
+	"blog-8": {Name: "The Twin Realm", Title: "A locale", Flavor: "The same site, derived — never written twice.", Objectives: []string{"the locale tree", "the override"}, Quizzes: []quizSpec{
+		{Question: "Where does a locale's subtree come from?", Options: []string{"You write each translated page by hand", "It is derived from the base tree, with overrides for the pages that differ", "The content package scans a locale directory"}, Correct: 1, Why: "BuildLocales mirrors the base tree under the locale's prefix; Override lists only the pages that genuinely differ."},
+		{Question: "What does the Override map list?", Options: []string{"Every page in the locale", "Only the pages that differ from the base", "The locale's assets"}, Correct: 1, Why: "Everything not named in Override is mirrored automatically; Override patches only the nodes that genuinely differ — the default is the same site."},
+	}, Bonus: true, Requires: []string{"blog-7"}},
+	"blog-9": {Name: "The Spark", Title: "Interactivity", Flavor: "The page wakes up — without a framework.", Objectives: []string{"the live counter"}, Quizzes: []quizSpec{
+		{Question: "What does @x.Text(count) do?", Options: []string{"Only renders the current value", "Renders the value and generates the JavaScript that keeps it in sync", "Downloads a WASM runtime"}, Correct: 1, Why: "Markers render at build time and emit their own binding in the same call — the static value is in the HTML and the generated JavaScript updates it."},
+		{Question: "What does x.Wrap do?", Options: []string{"Adds a class to a component", "Applies bindings to a component's root element without touching its markup", "Replaces a component with a signal"}, Correct: 1, Why: "x.Wrap takes the component you already have and attaches the bindings to its root element — the markup stays untouched."},
+		{Question: "With JavaScript disabled, what does a page with x markers show?", Options: []string{"Nothing — the markers need JavaScript", "The static values from build time", "A WASM fallback"}, Correct: 1, Why: "Markers render their current value into the HTML at build time; the generated JavaScript only keeps it in sync. No JavaScript, no framework — the value is still there."},
+	}, Bonus: true, Requires: []string{"blog-3"}},
+	"blog-10": {Name: "The Loop", Title: "The dev loop", Flavor: "Save. Watch it rebuild. Repeat.", Objectives: []string{"the dev server"}, Quizzes: []quizSpec{
+		{Question: "Why must the build run out of process?", Options: []string{"It is faster", "A running Go program cannot load newly compiled code", "To avoid port conflicts"}, Correct: 1, Why: "Your pages are compiled templ components; an in-process build would re-render the components from the binary that started the server."},
+		{Question: "What happens when a build fails?", Options: []string{"The dev server stops", "The error is shown in the browser, the last good output stays", "Nothing — it retries silently"}, Correct: 1, Why: "A failed build doesn't stop the server: the compiler error appears as an overlay and is cleared on the next successful build."},
+	}, Bonus: true, Requires: []string{"blog-5"}},
+	"blog-11": {Name: "Launch!", Title: "Ship it", Flavor: "The build directory is the site. Send it.", Objectives: []string{"the deploy config", "the workflow"}, Quizzes: []quizSpec{
+		{Question: "How should pages link to assets?", Options: []string{"Write /style/style.css as a literal", "Through Ctx.Asset and Ctx.Link", "Through a path copied out of the build"}, Correct: 1, Why: "Ctx.Asset and Ctx.Link are base-aware, so one build works from disk, at a localhost root, and under /repo/."},
+		{Question: "What is in the build directory?", Options: []string{"A Go binary and a database", "Plain HTML, CSS and a little JavaScript", "Source code that still needs compiling"}, Correct: 1, Why: "Build writes static files — the site is ready to serve from anywhere, with no runtime to install."},
+	}, Bonus: true, Requires: []string{"blog-7", "blog-9", "blog-10"}},
+}
+
+// questLine is one tutorial quest line: its id (the quest ids' prefix), the
+// overview copy and its steps in order.
+type questLine struct {
+	ID     string
+	Name   string
+	Flavor string
+	Steps  []templates.NavItem
+}
+
+// questLines lists every line in the order the overview shows them. The blog
+// stays the flagship; the clicker is the second line (tutorial-game/
+// 04-quest-lines.md).
+var questLines = []questLine{
+	{ID: "blog", Name: "Build a blog", Flavor: "Eleven steps from an empty directory to a two-language blog with tags, RSS and a GitHub Pages deployment.", Steps: []templates.NavItem{
+		{Label: "1. Setup", Path: "tutorial/1-setup/"},
+		{Label: "2. The tree", Path: "tutorial/2-the-tree/"},
+		{Label: "3. A layout", Path: "tutorial/3-a-layout/"},
+		{Label: "4. Markdown posts", Path: "tutorial/4-markdown-posts/"},
+		{Label: "5. A collection", Path: "tutorial/5-a-collection/"},
+		{Label: "6. Tags & pagination", Path: "tutorial/6-tags-and-pagination/"},
+		{Label: "7. RSS & sitemap", Path: "tutorial/7-rss-and-sitemap/"},
+		{Label: "8. A locale", Path: "tutorial/8-a-locale/"},
+		{Label: "9. Interactivity", Path: "tutorial/9-interactivity/"},
+		{Label: "10. The dev loop", Path: "tutorial/10-the-dev-loop/"},
+		{Label: "11. Ship it", Path: "tutorial/11-ship-it/"},
+	}},
+}
+
+// lineTotalsJSON is one line's game-relevant counts as emitted on every game
+// page — the shape the shell unmarshals into game.LineTotals. Ids is the
+// line's quest id list, so the ledger iterates the real quests (and honours
+// the gaps the slimming leaves behind).
+type lineTotalsJSON struct {
+	Quests     int      `json:"quests"`
+	Quizzes    int      `json:"quizzes"`
+	Bonuses    int      `json:"bonuses"`
+	Objectives int      `json:"objectives"`
+	Ids        []string `json:"ids"`
+}
+
+// questMetaJSON is one quest's content counts as emitted on every game page —
+// the shape the shell unmarshals into game.QuestMeta, the hub's per-row
+// progress and lab receipt.
+type questMetaJSON struct {
+	Objectives int `json:"objectives"`
+	Quizzes    int `json:"quizzes"`
+	Lab        int `json:"lab"`
+}
+
+// gameTotals is every quest line's game-relevant counts, the quest dependency
+// graph and the quest display names, emitted on every game page so the shell
+// can evaluate the badges, the map's per-line progress and the "now available"
+// lists from anywhere. The shape mirrors scripts/game's Totals — the Lines
+// key is the contract the shell unmarshals.
+func gameTotals() any {
+	lines := map[string]lineTotalsJSON{}
+	deps := map[string][]string{}
+	names := map[string]string{}
+	quests := map[string]questMetaJSON{}
+	for _, line := range questLines {
+		t := lineTotalsJSON{}
+		ids := make([]string, 0, len(line.Steps))
+		for _, step := range line.Steps {
+			id := line.ID + "-" + strconv.Itoa(questNum(step.Path))
+			spec := questSpecs[id]
+			ids = append(ids, id)
+			t.Quizzes += len(spec.Quizzes)
+			t.Objectives += len(spec.Objectives)
+			if spec.Bonus {
+				t.Bonuses++
+			}
+			deps[id] = spec.Requires
+			names[id] = questLabel(id, spec)
+			quests[id] = questMetaJSON{
+				Objectives: len(spec.Objectives),
+				Quizzes:    len(spec.Quizzes),
+				Lab:        labSlots(labSpecs[id]),
+			}
+		}
+		t.Quests = len(ids)
+		t.Ids = ids
+		lines[line.ID] = t
+	}
+	return map[string]any{"Lines": lines, "Deps": deps, "Names": names, "Quests": quests, "RecommendedAfter": map[string]string{}}
+}
+
+// gamePaths is the quest-id → href map the shell needs to point the modal's
+// "now available" list and the pager's suggested-next link. The overview is
+// included under "tutorial".
+func gamePaths(c ssg.Ctx) map[string]string {
+	paths := map[string]string{}
+	for _, line := range questLines {
+		for _, step := range line.Steps {
+			id := line.ID + "-" + strconv.Itoa(questNum(step.Path))
+			paths[id] = c.Link(step.Path)
+		}
+	}
+	paths["tutorial"] = c.Link("tutorial/")
+	return paths
+}
+
+// questLabel is a quest's display name for the dependency tooltips, the modal's
+// lists and the pager: "3 · The Shell".
+func questLabel(id string, spec questSpec) string {
+	return fmt.Sprintf("%d · %s", questStep(id), spec.Name)
+}
+
+// depNames renders a quest's requirements as display names — the map's
+// dependency line and the shell's tooltips share the shape.
+func depNames(reqs []string) string {
+	names := make([]string, 0, len(reqs))
+	for _, r := range reqs {
+		names = append(names, questLabel(r, questSpecs[r]))
+	}
+	return strings.Join(names, ", ")
+}
+
+// stepID is the quest id of a line's n-th step.
+func stepID(line string, n int) string {
+	return line + "-" + strconv.Itoa(n)
+}
+
+// badgeInfo is one entry of the overview's badge collection.
+type badgeInfo struct {
+	ID        string
+	Name      string
+	Condition string
+	Line      string // the quest line the badge belongs to ("" = shared)
+}
+
+// badgeInfos lists every badge with its unlock condition and line, in the
+// ledger's evaluation order. The shell toggles the earned class; the
+// condition is the tooltip.
+var badgeInfos = []badgeInfo{
+	{"first-quest", "First Quest", "Complete quest 1 of any line", ""},
+	{"boss-slayer", "Boss Slayer", "Complete the final quest of any line", ""},
+	{"quiz-whiz", "Quiz Whiz", "3 quizzes answered first try", ""},
+	{"perfectionist", "Perfectionist", "Every blog quiz answered first try", "blog"},
+	{"bonus-hunter", "Bonus Hunter", "Every blog try-it bonus opened", "blog"},
+	{"explorer", "Explorer", "Visit all 11 blog quest pages", "blog"},
+	{"speedrunner", "Speedrunner", "Complete a quest within 2 minutes of first visiting it", ""},
+	{"back-for-more", "Back for More", "Complete a quest on a later visit than the one that started it", ""},
+	{"completionist", "Completionist", "Every objective, quiz, bonus and quest of a line", ""},
+	{"cookie-monster", "Cookie Monster", "Complete all 7 clicker quests", "clicker"},
+}
+
+// badgeInfosFor lists a line's badges — the shared ones plus the line's own.
+func badgeInfosFor(line string) []badgeInfo {
+	var out []badgeInfo
+	for _, b := range badgeInfos {
+		if b.Line == "" || b.Line == line {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
+// TutorialNav is the blog line's sidebar: the overview and ten steps, each
+// building on the last — the blog grows in front of you. It is also what
+// main.go walks to build the tutorial subtree. The clicker line lives in its
+// own group (ClickerNav).
+var TutorialNav = []templates.NavGroup{
+	{
+		Title: "Build a blog",
+		Items: append([]templates.NavItem{{Label: "Build a blog", Path: "tutorial/"}}, questLines[0].Steps...),
+	},
+}
+
+// ClickerNav is the cookie clicker line's own sidebar group; clickerSteps
+// itself is defined in tutorial_clicker.templ next to the pages.
+var ClickerNav = []templates.NavGroup{
+	{Title: "Cookie Clicker", Items: clickerSteps},
+}
+
+// tutorialSteps returns the blog line's numbered steps, skipping the
+// overview entry. The overview's progress checklist is built from this, so
+// it cannot drift from the sidebar order.
+func tutorialSteps() []templates.NavItem {
+	if len(questLines) == 0 {
+		return nil
+	}
+	return questLines[0].Steps
+}
+
+// questNum returns the step number of a quest path ("tutorial/3-a-layout/"
+// and "tutorial/clicker/3-the-upgrades/" both → 3), or 0 for paths that
+// aren't numbered steps.
+func questNum(path string) int {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	head, _, _ := strings.Cut(parts[len(parts)-1], "-")
+	n, err := strconv.Atoi(head)
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// questLineOf returns the quest line a tutorial page path — or a quest id —
+// belongs to ("blog" for the numbered steps at tutorial/N-…, "clicker" for
+// the subdirectory and its ids), or "" for pages outside a quest.
+func questLineOf(path string) string {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) >= 2 {
+		if parts[1] == "clicker" {
+			return "clicker"
+		}
+		return "blog"
+	}
+	line, _, ok := strings.Cut(path, "-")
+	if ok && (line == "blog" || line == "clicker") {
+		return line
+	}
+	return ""
+}
+
+// questStep returns the step number of a quest id ("blog-3" → 3).
+func questStep(id string) int {
+	_, n, ok := strings.Cut(id, "-")
+	if !ok {
+		return 0
+	}
+	n2, err := strconv.Atoi(n)
+	if err != nil {
+		return 0
+	}
+	return n2
+}
+
+// tutorialQuestID returns the quest id ("blog-3", "clicker-1") for a
+// tutorial page path, or "" for pages outside a quest (the overview).
+func tutorialQuestID(path string) string {
+	line := questLineOf(path)
+	n := questNum(path)
+	if line == "" || n == 0 {
+		return ""
+	}
+	return line + "-" + strconv.Itoa(n)
+}
+
+// tutorialPage wraps one step in the quest hub (the sidebar's replacement on
+// tutorial pages) and the pager, and renders the quest chrome — the step
+// progress, the quest header, the step rail, the objectives track and the
+// step lab — above the page's own prose. The game HUD goes through the
+// Layout's pre-main slot: it renders directly under the topbar, outside
+// main, so its sticky bar sticks against the page height instead of the
+// article's.
+templ tutorialPage(c ssg.Ctx, prev, next *templates.NavItem) {
+	@templates.Layout(c, "", nil, tutorialPre(c), questHub(c, tutorialQuestID(c.Path), hubLine(c.Path), tutorialQuestID(c.Path) == "")) {
+		if id := tutorialQuestID(c.Path); id != "" {
+			@stepProgress(id)
+			@questHeader(id)
+			if railQuest(id) {
+				@stepRail(id)
+			}
+			@questTrack(id)
+			// The quest's layout composes the shared components its content
+			// needs: lab-first quests put the practice before the lesson.
+			if questSpecs[id].Layout == "lab-first" {
+				@stepLab(id)
+			}
+		}
+		<article class="prose">
+			{ children... }
+		</article>
+		if id := tutorialQuestID(c.Path); id != "" {
+			if len(questSpecs[id].Quizzes) > 0 {
+				@questQuizzes(id)
+			}
+			if questSpecs[id].Layout != "lab-first" {
+				@stepLab(id)
+			}
+			@completePanel(id)
+		}
+		<nav class="pager">
+			if prev != nil {
+				<a class="prev" href={ c.Link(prev.Path) }>
+					<span>Previous</span>{ prev.Label }
+				</a>
+			}
+			if next != nil {
+				<a class="next" href={ c.Link(next.Path) } data-next-quest={ tutorialQuestID(next.Path) }>
+					<span>Next</span><span class="pager-name">{ next.Label }</span>
+				</a>
+			}
+		</nav>
+	}
+	@templates.WasmScript(c, "tutorial_game")
+}
+
+// tutorialPre is the Layout's pre-main slot: the game HUD on quest pages,
+// nothing on the overview — whose rank and XP already live on the map.
+func tutorialPre(c ssg.Ctx) []templ.Component {
+	id := tutorialQuestID(c.Path)
+	if id == "" {
+		return nil
+	}
+	return []templ.Component{gameHUD(c, id)}
+}
+
+// stepProgress is the per-step tracker: a bar for *this step's* progress —
+// objectives ticked plus quizzes solved — driven by the page's own mechanics
+// (the [data-objective] change events and the astwerk:quiz events the quiz
+// script dispatches). A quest is complete when every objective is ticked and
+// every quiz is solved; the sidebar checkmark comes from the completion key
+// this script maintains, which the wasm shell also writes.
+templ stepProgress(id string) {
+	<div
+		class="step-progress"
+		data-quest={ id }
+		data-objectives={ fmt.Sprintf("%d", len(questSpecs[id].Objectives)) }
+		data-quizzes={ fmt.Sprintf("%d", len(questSpecs[id].Quizzes)) }
+	>
+		<div class="progress-bar"><span data-progress></span></div>
+		<span class="progress-note" data-progress-note></span>
+	</div>
+	<script>
+		(() => {
+			const box = document.querySelector(".step-progress");
+			if (!box) return;
+			const KEY = "astwerk-tutorial-steps";
+			const bar = box.querySelector(".progress-bar span");
+			const note = box.querySelector(".progress-note");
+			const done = new Set(JSON.parse(localStorage.getItem(KEY) || "[]"));
+			// The lab counts toward completion too: its solved units (unique
+			// slots marked ok, plus the order files that are in place) add to
+			// the objectives and quizzes — the no-wasm fallback's own tally.
+			const labFrame = document.querySelector("[data-lab]");
+			const labTotal = labFrame ? Number(labFrame.dataset.labSlots || "0") : 0;
+			const total = Number(box.dataset.objectives) + Number(box.dataset.quizzes) + labTotal;
+
+			const render = () => {
+				const objectives = document.querySelectorAll("[data-objective]:checked").length;
+				const quizzes = document.querySelectorAll(".quiz[data-solved]").length;
+				const labDone = labFrame
+					? new Set(Array.from(labFrame.querySelectorAll("[data-lab-slot][data-state='ok']")).map((s) => s.dataset.labSlot)).size
+						+ labFrame.querySelectorAll("[data-lab-order-file][data-state='ok']").length
+					: 0;
+				const n = objectives + quizzes + labDone;
+				if (bar) bar.style.width = (total ? Math.round((n / total) * 100) : 0) + "%";
+				if (note) note.textContent = n + " / " + total + " done";
+				document.querySelectorAll("[data-track-note]").forEach((t) => {
+					t.textContent = objectives + " of " + box.dataset.objectives + " done";
+				});
+				// The content sections mirror the boxes: a section is done once
+				// its objective is ticked (the rail marks the same on quests
+				// that have one; this covers the single-objective quests too).
+				document.querySelectorAll("[data-quest-section]").forEach((sec) => {
+					const b = document.querySelector('[data-objective][data-scroll-to="#quest-section-' + sec.dataset.section + '"]');
+					sec.classList.toggle("done", !!(b && b.checked));
+				});
+				// Every mirror (the hub's rows and the sections' own toggles)
+				// follows the boxes.
+				const allBoxes = document.querySelectorAll("[data-objective]");
+				document.querySelectorAll("[data-objective-mirror]").forEach((m) => {
+					const b = allBoxes[Number(m.dataset.mirrorOf) - 1];
+					if (b) m.checked = b.checked;
+				});
+				if (n >= total) done.add(box.dataset.quest);
+				else done.delete(box.dataset.quest);
+				localStorage.setItem(KEY, JSON.stringify(Array.from(done)));
+				// The sidebar is gone on quest pages; the hub's chain rows take
+				// over the done marking. Without wasm this is the only writer;
+				// with wasm the shell owns the state and this stays out of the way.
+				if (!document.body.classList.contains("shell-alive")) {
+					document.querySelectorAll(".sidebar-group a").forEach((a) => {
+						const m = (a.getAttribute("href") || "").match(/tutorial\/(?:(\d+)-|clicker\/(\d+)-)/);
+						const id = m ? (m[1] ? "blog-" + m[1] : "clicker-" + m[2]) : null;
+						a.classList.toggle("done", id ? done.has(id) : false);
+					});
+					document.querySelectorAll("[data-hub-row]").forEach((a) => {
+						a.classList.toggle("done", done.has(a.dataset.hubRow));
+					});
+					// The current quest's row and the hub's now-playing card get
+					// their live progress and lab count — the only quest the
+					// no-wasm fallback can know about.
+					const row = document.querySelector('[data-hub-row="' + box.dataset.quest + '"]');
+					if (row) {
+						const meta = row.querySelector("[data-hub-meta]");
+						if (meta) {
+							const lab = document.querySelector("[data-lab-chip]");
+							meta.textContent = n + " / " + total + (lab ? " · " + lab.textContent : "");
+						}
+					}
+					const playing = document.querySelector("[data-hub-playing]");
+					if (playing) {
+						const pbar = playing.querySelector("[data-hub-playing-bar]");
+						if (pbar) pbar.style.width = (total ? Math.round((n / total) * 100) : 0) + "%";
+						const pcount = playing.querySelector("[data-hub-playing-count]");
+						if (pcount) pcount.textContent = n >= total ? "Quest complete!" : n + " of " + total + " done";
+						playing.classList.toggle("done", n >= total);
+						const pmeta = playing.querySelector("[data-hub-playing-meta]");
+						if (pmeta) {
+							let parts = quizzes + "/" + box.dataset.quizzes + " quizzes";
+							const lab = document.querySelector("[data-lab-chip]");
+							if (lab) parts += " · " + lab.textContent;
+							pmeta.textContent = parts;
+						}
+					}
+				}
+			};
+
+			const onDOMChange = (e) => {
+				if (!e.target.matches) return;
+				if (e.target.matches("[data-objective]")) {
+					render();
+					return;
+				}
+				if (!e.target.matches("[data-objective-mirror]")) return;
+				// Without the shell, a mirror (a section's toggle or a hub row)
+				// is a real write point: sync the box and let its change event
+				// drive the rail and the progress. With the shell alive, the
+				// shell owns the write and this stays out of the way.
+				if (document.body.classList.contains("shell-alive")) {
+					render();
+					return;
+				}
+				const b = document.querySelectorAll("[data-objective]")[Number(e.target.dataset.mirrorOf) - 1];
+				if (b && b.checked !== e.target.checked) {
+					b.checked = e.target.checked;
+					b.dispatchEvent(new Event("change", { bubbles: true }));
+				}
+				render();
+			};
+			document.addEventListener("change", onDOMChange);
+			document.addEventListener("astwerk:quiz", render);
+			document.addEventListener("astwerk:restore", render);
+			render();
+		})();
+	</script>
+}
+
+// localeDemo is a live EN/DE switcher for the locale step: the same page in two
+
+templ checkpoint(files ...string) {
+	<aside class="checkpoint">
+		<p><strong>Checkpoint</strong> — your files so far:</p>
+		<ul>
+			for _, f := range files {
+				<li><code>{ f }</code></li>
+			}
+		</ul>
+	</aside>
+}
+
+// tryit proposes a small experiment and hides the expected outcome behind a
+// reveal, so the reader checks their own result before seeing it.
+templ tryit(experiment string, expected string) {
+	<div class="tryit">
+		<p><strong>Try it.</strong> { experiment }</p>
+		<details>
+			<summary>What you should see</summary>
+			<p>{ expected }</p>
+		</details>
+	</div>
+}
+
+// quiz asks one multiple-choice question with instant feedback: picking an
+// option reveals right or wrong plus the explanation, a correct answer marks
+// the quiz solved (data-solved — the step progress and the game shell both
+// count on it), and the game scores the attempt. The checking runs from
+// layout.templ's shared script, keyed off the data attributes. The quiz's
+// content comes from the quest data, so the pages carry only prose.
+templ quiz(q quizSpec) {
+	<div class="quiz" data-correct={ fmt.Sprintf("%d", q.Correct) }>
+		<p class="quiz-question">{ q.Question }</p>
+		<div class="quiz-options">
+			for i, opt := range q.Options {
+				<button type="button" class="quiz-option" data-opt={ fmt.Sprintf("%d", i) }>{ opt }</button>
+			}
+		</div>
+		<p class="quiz-feedback" aria-live="polite"></p>
+		<p class="quiz-why" hidden>{ q.Why }</p>
+		<button type="button" class="quiz-reset" hidden>Try again</button>
+	</div>
+}
+
+// questQuizzes renders the quest's quizzes as a block under the prose — the
+// quest's encounters, from the same data the shell counts.
+templ questQuizzes(id string) {
+	<div class="quest-quizzes">
+		<h2>Check your understanding</h2>
+		for _, q := range questSpecs[id].Quizzes {
+			@quiz(q)
+		}
+	</div>
+}
+
+// questHasBonus reports whether the quest's page carries a try-it block; the
+// ones without are quests 1, 2 and 7.
+func questHasBonus(step int) bool { return questSpecs[fmt.Sprintf("blog-%d", step)].Bonus }
+
+// railQuest reports whether the quest gets the step rail: it needs at least
+// two objectives to step through — a single-step rail is just noise (the
+// quest's layout fits its content, not a uniform frame).
+func railQuest(id string) bool {
+	return len(questSpecs[id].Objectives) >= 2
+}
+
+// questReward is the quest's full XP potential — the callout on the header.
+func questReward(id string) int {
+	spec := questSpecs[id]
+	bonus := 0
+	if spec.Bonus {
+		bonus = 15
+	}
+	return 50 + len(spec.Objectives)*10 + len(spec.Quizzes)*20 + bonus
+}
+
+// questHeader frames one step page as a quest: the numbered h1, the flavor
+// line and the reward callout with its state chip, plus the lab chip where
+// the quest has a lab. The shell re-labels the state chip from the save
+// (08-reactive-pages.md); the objectives track is rendered separately, right
+// under the step rail.
+templ questHeader(id string) {
+	<header class="quest-header" data-quest-header>
+		<h1>{ questStep(id) } · { questSpecs[id].Name } — { questSpecs[id].Title }</h1>
+		<p class="quest-flavor">{ questSpecs[id].Flavor }</p>
+		<p class="quest-reward-row">
+			<span class="quest-reward" data-header-state data-reward={ fmt.Sprintf("%d", questReward(id)) }>Up to +{ fmt.Sprintf("%d", questReward(id)) } XP</span>
+			if labSlots(labSpecs[id]) > 0 {
+				<span class="quest-lab-chip" data-lab-chip data-lab-total={ fmt.Sprintf("%d", labSlots(labSpecs[id])) }>Lab 0/{ fmt.Sprintf("%d", labSlots(labSpecs[id])) }</span>
+			}
+		</p>
+	</header>
+}
+
+// questSection frames one objective's content: the objective as a numbered
+// h2 over its prose, demos and practice, with its own done toggle — ticking
+// it marks the objective (the same box the track and the hub mirror). The
+// sections are what the step rail steps through, what the quest track's boxes
+// and the hub's mirrors scroll to, and what the rail marks done — the page's
+// content adapts to the quest's objectives instead of every quest sharing one
+// undifferentiated flow.
+templ questSection(id string, n int) {
+	<section class="quest-section" id={ fmt.Sprintf("quest-section-%d", n) } data-quest-section data-section={ fmt.Sprintf("%d", n) } data-scroll-to={ fmt.Sprintf("#quest-section-%d", n) }>
+		<h2 class="quest-section-head">
+			<span class="quest-section-num" aria-hidden="true">{ fmt.Sprintf("%d", n) }</span>
+			<span class="quest-section-title">{ questSpecs[id].Objectives[n-1] }</span>
+			<label class="quest-section-toggle" title={ "Mark done: " + questSpecs[id].Objectives[n-1] }>
+				<input type="checkbox" data-objective-mirror data-mirror-of={ fmt.Sprintf("%d", n) } aria-label={ "Mark done: " + questSpecs[id].Objectives[n-1] }/>
+				<span aria-hidden="true">&#10003;</span>
+			</label>
+		</h2>
+		<div class="quest-section-body">
+			{ children... }
+		</div>
+	</section>
+}
+
+// questTrack is the step's quest-log panel: every objective as a numbered
+// entry the player ticks in any order — the whole quest visible at once, with
+// its own progress line. Each box carries the anchor (data-scroll-to) of the
+// content section it refers to — the quest hub's mirrors and the step rail
+// navigate by the same table, so one map has three consumers.
+templ questTrack(id string) {
+	<div class="quest-track" data-quest-track>
+		<div class="quest-track-head">
+			<p class="quest-track-title">Objectives</p>
+			<span class="quest-track-progress" data-track-note>0 of { fmt.Sprintf("%d", len(questSpecs[id].Objectives)) } done</span>
+		</div>
+		<ol class="quest-track-list">
+			for i, o := range questSpecs[id].Objectives {
+				<li>
+					<label>
+						<input type="checkbox" data-objective data-scroll-to={ fmt.Sprintf("#quest-section-%d", i+1) }/>
+						<span class="quest-track-num">{ fmt.Sprintf("%d", i+1) }</span>
+						<span class="quest-track-text">{ o }</span>
+					</label>
+				</li>
+			}
+		</ol>
+		<p class="quest-track-hint">Do these in any order — tick them here, in the quest hub, or from the step rail. The quest completes when every objective is ticked and every quiz is answered.</p>
+	</div>
+}
+
+// gameHUD is the game shell's skeleton — the quest bar, the quest-complete
+// modal and the toast stack. The quest hub lives in the Layout's side slot
+// (questHub below); the HUD's Objectives button opens the hub's mobile sheet.
+// The wasm shell hydrates it (scripts/tutorial_game.go); with wasm absent it
+// reads as a static bar and the vanilla progress script keeps working.
+templ gameHUD(c ssg.Ctx, id string) {
+	<div class="game-hud" data-quest={ id } data-line={ questLineOf(id) } data-objectives={ fmt.Sprintf("%d", len(questSpecs[id].Objectives)) } data-quizzes={ fmt.Sprintf("%d", len(questSpecs[id].Quizzes)) } data-game-totals={ templ.JSONString(gameTotals()) } data-game-paths={ templ.JSONString(gamePaths(c)) }>
+		<span class="game-hud-quest" data-game-quest>Quest { questStep(id) } · { questSpecs[id].Name }</span>
+		<span class="game-hud-rank" data-game-rank>&ndash; &ndash;</span>
+		<div class="game-xpbar"><span data-game-xpbar></span></div>
+		<span class="game-hud-xp" data-game-xp>&ndash; &ndash;</span>
+		<span class="game-hud-badges" data-game-badges>&ndash; &ndash;</span>
+		<button type="button" class="game-hud-sound" data-game-sound aria-pressed="false" aria-label="Toggle sound">🔕</button>
+		<button type="button" class="game-hud-log" data-hub-open aria-expanded="false" aria-controls="quest-hub">Objectives</button>
+	</div>
+	<div class="game-modal" data-game-modal hidden>
+		<div class="game-modal-backdrop" data-game-modal-close></div>
+		<div class="game-modal-body" role="dialog" aria-modal="true" aria-labelledby="game-modal-title">
+			<p class="game-modal-title" id="game-modal-title">Quest { questStep(id) } · { questSpecs[id].Name } complete!</p>
+			<ul class="game-modal-breakdown" data-game-modal-breakdown></ul>
+			<p class="game-modal-badges" data-game-modal-badges></p>
+			<div class="game-modal-next" data-game-modal-next></div>
+			<p class="game-modal-actions">
+				<button type="button" class="button ghost" data-game-modal-close>Close</button>
+			</p>
+		</div>
+	</div>
+	<div class="game-toasts" data-game-toasts aria-live="polite"></div>
+}
+
+// questHub is the tutorial's navigation, replacing the docs sidebar on
+// tutorial pages (05-quest-hub.md): the line tabs, the "you" summary, the
+// now-playing card with the current quest's objectives (mirrors of the step
+// body's boxes) and the quest chain with its four states. One component, CSS
+// moves it from the static side column to a bottom sheet under 860 px — where
+// the HUD's Objectives button opens it. The overview gets the overview variant
+// (no summary, no now-playing card — the map is the centrepiece there).
+// The chain rows render statically with neutral states: player state is the
+// shell's job, so without wasm the hub reads as a plain quest list.
+templ questHub(c ssg.Ctx, id string, line string, overview bool) {
+	<aside class="quest-hub" id="quest-hub" data-quest-hub data-quest={ id } data-line={ line } data-game-totals={ templ.JSONString(gameTotals()) }>
+		<p class="hub-mobile-head">
+			<span class="hub-mobile-title">Quest hub</span>
+			<button type="button" class="hub-close" data-hub-close aria-label="Close quest hub">&times;</button>
+		</p>
+		<div class="game-line-tabs hub-tabs" role="tablist" aria-label="Quest lines">
+			for _, l := range questLines {
+				<button type="button" class={ hubTabClass(l.ID, line) } role="tab" aria-selected?={ l.ID == line } data-hub-line-tab={ l.ID }>{ l.Name }</button>
+			}
+		</div>
+		if !overview {
+			<p class="hub-you">
+				<span class="hub-rank" data-hub-rank>&ndash; &ndash;</span>
+				<span class="game-xpbar hub-xpbar"><span data-hub-xpbar></span></span>
+				<span class="hub-badges" data-hub-badges>&ndash; &ndash;</span>
+			</p>
+			<div class="hub-playing" data-hub-playing>
+				<p class="hub-playing-title">Quest { questStep(id) } · { questSpecs[id].Name }</p>
+				<p class="hub-unlocks" data-hub-unlocks></p>
+				<div class="hub-playing-progress">
+					<span class="game-xpbar hub-playing-bar"><span data-hub-playing-bar></span></span>
+					<span class="hub-playing-count" data-hub-playing-count>0 of { fmt.Sprintf("%d", len(questSpecs[id].Objectives)+len(questSpecs[id].Quizzes)+labSlots(labSpecs[id])) } done</span>
+				</div>
+				<ul class="hub-objectives">
+					for i, o := range questSpecs[id].Objectives {
+						<li class="hub-obj" data-hub-obj>
+							<label>
+								<input type="checkbox" data-objective-mirror data-mirror-of={ fmt.Sprintf("%d", i+1) } data-scroll-to={ fmt.Sprintf("#quest-section-%d", i+1) } aria-label={ fmt.Sprintf("Objective %d: %s", i+1, o) }/>
+								<span class="hub-obj-text">{ o }</span>
+								<span class="hub-xp">+10 XP</span>
+							</label>
+						</li>
+					}
+				</ul>
+				<p class="hub-playing-meta" data-hub-playing-meta></p>
+				<p class="hub-note">XP comes from doing. Nothing is ever lost.</p>
+			</div>
+		}
+		<nav class="hub-chain" aria-label="Quest chain">
+			for _, l := range questLines {
+				<ul class="hub-chain-line" data-hub-chain-line={ l.ID } hidden?={ l.ID != line }>
+					for j, item := range l.Steps {
+						<li>
+							<a data-hub-row={ l.ID + "-" + fmt.Sprintf("%d", j+1) } href={ c.Link(item.Path) } aria-current={ hubAriaCurrent(l.ID+"-"+fmt.Sprintf("%d", j+1), id) }>
+								<span class="hub-row-mark" aria-hidden="true">&#10003;</span>
+								<span class="hub-row-name">{ item.Label }</span>
+								<span class="hub-row-meta" data-hub-meta></span>
+								<span class="hub-row-lock" aria-hidden="true">&#128274;</span>
+							</a>
+						</li>
+					}
+				</ul>
+			}
+		</nav>
+		<p class="hub-toggle-row">
+			<button type="button" class="hub-toggle" data-hub-toggle aria-pressed="false">Show all quests</button>
+		</p>
+		<p class="hub-footer"><a href={ c.Link("tutorial/") }>Full map &rarr;</a></p>
+	</aside>
+	<script>
+		(() => {
+			// The line tabs, vanilla like the map's: without wasm the hub still
+			// switches lines — the shell only adds the player-state classes on top.
+			const hub = document.querySelector("[data-quest-hub]");
+			if (!hub) return;
+			const tabs = Array.from(hub.querySelectorAll("[data-hub-line-tab]"));
+			const chains = Array.from(hub.querySelectorAll("[data-hub-chain-line]"));
+			tabs.forEach((tab) => {
+				tab.addEventListener("click", () => {
+					tabs.forEach((t) => {
+						t.classList.toggle("on", t === tab);
+						t.setAttribute("aria-selected", String(t === tab));
+					});
+					chains.forEach((ch) => {
+						ch.hidden = ch.dataset.hubChainLine !== tab.dataset.hubLineTab;
+					});
+				});
+			});
+		})();
+	</script>
+}
+
+// hubTabClass marks the active line's tab as the initially selected one.
+func hubTabClass(id, active string) string {
+	if id == active {
+		return "on"
+	}
+	return ""
+}
+
+// hubAriaCurrent marks the page's own quest in the chain as current — "page"
+// on the current row, empty (rendered absent-ish) everywhere else.
+func hubAriaCurrent(id, pageID string) string {
+	if id == pageID {
+		return "page"
+	}
+	return ""
+}
+
+// hubLine returns the quest hub's initially active line: the page's own line,
+// or the first line on the overview.
+func hubLine(path string) string {
+	line := questLineOf(tutorialQuestID(path))
+	if line == "" {
+		line = questLines[0].ID
+	}
+	return line
+}
+
+// completePanel is the completed-quest footer panel: templ-emitted hidden,
+// shown by the shell when the current quest is complete — the modal's quiet
+// cousin for revisits (08-reactive-pages.md).
+templ completePanel(id string) {
+	<div class="quest-complete-panel" data-complete-panel hidden>
+		<p class="quest-complete-title">✓ Quest complete — +{ fmt.Sprintf("%d", questReward(id)) } XP earned</p>
+		<ul class="quest-complete-breakdown" data-complete-breakdown></ul>
+		<p class="quest-complete-next" data-complete-next></p>
+	</div>
+}
+
+// mapNodeClass marks the boss node; the shell adds the state classes.
+func mapNodeClass(line string, n int) string {
+	if n == len(questLineByID(line).Steps) {
+		return "game-map-node boss"
+	}
+	return "game-map-node"
+}
+
+// questLineByID returns the quest line with the given id.
+func questLineByID(id string) questLine {
+	for _, line := range questLines {
+		if line.ID == id {
+			return line
+		}
+	}
+	return questLine{}
+}
+
+templ gameMap(c ssg.Ctx) {
+	<div class="game-map" data-game-map data-game-totals={ templ.JSONString(gameTotals()) }>
+		<p class="game-summary" data-game-summary>0 of { fmt.Sprintf("%d", totalQuests()) } quests complete &middot; 0 XP &middot; 0 badges</p>
+		<p class="game-rank-line">Rank: <strong data-game-rank>&ndash; &ndash;</strong></p>
+		<div class="game-xpbar game-xpbar-map"><span data-game-rankbar></span></div>
+		<div class="game-line-tabs" role="tablist" aria-label="Quest lines">
+			for i, line := range questLines {
+				<button
+					type="button"
+					class={ tabClass(i) }
+					role="tab"
+					aria-selected?={ i == 0 }
+					data-game-line-tab={ line.ID }
+				>
+					{ line.Name }
+				</button>
+			}
+		</div>
+		<p class="game-map-toggle-row">
+			<button type="button" class="game-map-toggle" data-map-toggle aria-pressed="false">Show all quests</button>
+		</p>
+		for i, line := range questLines {
+			<div class="game-line" data-game-line-path={ line.ID } hidden?={ i > 0 }>
+				<p class="game-line-name">{ line.Name }</p>
+				<p class="game-line-flavor">{ line.Flavor }</p>
+				<div class="game-map-nodes">
+					for j, item := range line.Steps {
+						if j > 0 {
+							<div class="game-map-path" data-map-path={ line.ID + "-" + fmt.Sprintf("%d", j) } aria-hidden="true"></div>
+						}
+						<a class={ mapNodeClass(line.ID, j+1) } data-map-node={ stepID(line.ID, j+1) } href={ c.Link(item.Path) } title={ questSpecs[stepID(line.ID, j+1)].Flavor } data-flavor={ questSpecs[stepID(line.ID, j+1)].Flavor }>
+							<span class="game-map-num">{ fmt.Sprintf("%d", j+1) }</span>
+							<span class="game-map-name">{ questSpecs[stepID(line.ID, j+1)].Name }</span>
+							<span class="game-map-check" aria-hidden="true">&#10003;</span>
+							<span class="game-map-lock" aria-hidden="true">&#128274;</span>
+						</a>
+						if reqs := questSpecs[stepID(line.ID, j+1)].Requires; len(reqs) > 0 {
+							<p class="game-map-dep" data-map-dep={ stepID(line.ID, j+1) } hidden>Needs: { depNames(reqs) }</p>
+						}
+					}
+				</div>
+			</div>
+		}
+		<p class="game-how">XP comes from doing. Nothing is ever lost.</p>
+		<p class="game-boss-callout" data-boss-callout hidden>✓ The boss is open — everything&rsquo;s in place.</p>
+		for _, line := range questLines {
+			<h3 class="game-badges-title">{ line.Name } badges</h3>
+			<ul class="game-badges">
+				for _, b := range badgeInfosFor(line.ID) {
+					<li class="game-badge" data-badge={ b.ID } title={ b.Condition }>
+						<span class="game-badge-mark" aria-hidden="true">&#9679;</span>
+						<span class="game-badge-name">{ b.Name }</span>
+						<span class="game-badge-condition">{ b.Condition }</span>
+					</li>
+				}
+			</ul>
+		}
+	</div>
+	<script>
+		(() => {
+			const tabs = Array.from(document.querySelectorAll("[data-game-line-tab]"));
+			const paths = Array.from(document.querySelectorAll("[data-game-line-path]"));
+			if (!tabs.length || !paths.length) return;
+			tabs.forEach((tab) => {
+				tab.addEventListener("click", () => {
+					tabs.forEach((t) => {
+						t.classList.toggle("on", t === tab);
+						t.setAttribute("aria-selected", String(t === tab));
+					});
+					paths.forEach((p) => {
+						p.hidden = p.dataset.gameLinePath !== tab.dataset.gameLineTab;
+					});
+				});
+			});
+		})();
+	</script>
+}
+
+// tabClass marks the first line's tab as the initially selected one.
+func tabClass(i int) string {
+	if i == 0 {
+		return "on"
+	}
+	return ""
+}
+
+// totalQuests is the sum of every line's quests — the map summary's total.
+func totalQuests() int {
+	n := 0
+	for _, line := range questLines {
+		n += len(line.Steps)
+	}
+	return n
+}

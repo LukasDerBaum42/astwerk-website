@@ -1,8 +1,8 @@
 +++
 Title = "The Node tree"
 Description = "Node, Build, BuildOptions — the shape of the tree and how it's written."
-Order = 20
-Group = "Start here"
+Order = 50
+Group = "Build a site"
 +++
 
 A `Node` describes one directory in the output. `Build` walks the tree from the

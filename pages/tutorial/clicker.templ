@@ -1,0 +1,466 @@
+package tutorial
+
+import (
+	"github.com/LukasDerBaum42/astwerk-website/templates"
+	x "github.com/LukasDerBaum42/astwerk-live/x"
+	"github.com/LukasDerBaum42/astwerk/ssg"
+)
+
+// State for the clicker line's live demos. Each page is its own HTML file and
+// its own x.Document, so these package-level signals are shared safely: every
+// page emits its own runtime at the build-time values, and the browser never
+// mixes two pages' state.
+var (
+	// CKCount is the game's state, named "cookies" so the escape-hatch
+	// scripts read and write it by name.
+	CKCount = x.NamedNumSignal("cookies", 0)
+
+	// CKLevel and CKPrice drive the upgrades demo: the level is stored, the
+	// price is derived from it — each combinator takes a value, so the
+	// intermediate level+1 is a memo feeding the price memo.
+	CKLevel = x.NamedNumSignal("level", 0)
+	CKNext  = x.Computed(x.Add(CKLevel, 1))
+	CKPrice = x.Computed(x.Mul(CKNext, 10))
+
+	// CKDisplay is the formatted counter the numbers demo's script writes.
+	CKDisplay = x.NamedStrSignal("display", "0")
+)
+
+// clickerSpecs is the clicker line's quest data, merged into questSpecs at
+// init so the blog and the clicker share one table.
+var clickerSpecs = map[string]questSpec{
+	"clicker-1": {Name: "The Button", Title: "One click", Flavor: "Every game starts as one button.", Layout: "lab-first", Objectives: []string{"the page", "the counter"}, Quizzes: []quizSpec{
+		{Question: "What does the name in NamedNumSignal do?", Options: []string{"Nothing — it is documentation only", "Lets scripts read and write the signal by that name", "Fixes the signal's initial value"}, Correct: 1, Why: "Named signals register under a fixed name in the page's runtime, so a script — or a WASM module — can reach the same state by name. That is the hook the next steps use."},
+		{Question: "What renders before any JavaScript runs?", Options: []string{"Nothing — the markers need JS", "The static value from build time", "A loading spinner"}, Correct: 1, Why: "Markers render their current value into the HTML at build time; the generated script only keeps it in sync. Disable JavaScript and the counter still shows 0."},
+	}},
+	"clicker-2": {Name: "The Clicker", Title: "It plays itself", Flavor: "A script that clicks for you — the escape hatch's first lesson.", Objectives: []string{"the named signal", "the auto-clicker"}, Quizzes: []quizSpec{
+		{Question: "Why does the script reach the signal by name?", Options: []string{"Because the marker set cannot express timers", "Because the page's runtime registers named signals as real variables", "Because Go requires it"}, Correct: 1, Why: "Named signals become real variables in the page's generated runtime, so a script can read and write them directly — the escape hatch needs a door."},
+		{Question: "What happens to the counter without the script?", Options: []string{"It stops updating — and the button still works", "The page breaks", "The value resets to zero"}, Correct: 0, Why: "The script only moves the number; the button's binding is generated markup. No script, no auto-click — the game is just slower, not broken."},
+	}, Bonus: true, Requires: []string{"clicker-1"}},
+	"clicker-3": {Name: "The Upgrades", Title: "Buyable power", Flavor: "Derived prices and guarded actions — the memo chain grows.", Objectives: []string{"the price memo", "the buy action"}, Quizzes: []quizSpec{
+		{Question: "Where does the price live?", Options: []string{"In a stored signal", "Derived from the level by a Computed — stored nowhere", "In the button's HTML"}, Correct: 1, Why: "price is x.Computed over level: the browser evaluates Add(level, 1) * 10 whenever level changes. Store the state, derive everything else."},
+		{Question: "What does x.If do in the buy action?", Options: []string{"Disables the button", "Runs one action when the condition is true in the browser, another otherwise", "Renders different markup"}, Correct: 1, Why: "x.If is an action-level conditional: it checks cookies against price at click time, then runs the Seq — or nothing when the player can't afford it."},
+	}, Bonus: true, Requires: []string{"clicker-2"}},
+	"clicker-4": {Name: "The Numbers", Title: "Big counts", Flavor: "1.2k reads better than 1234 — formatting is a program.", Objectives: []string{"the display signal", "the formatter"}, Quizzes: []quizSpec{
+		{Question: "Why is the formatter a script and not a marker?", Options: []string{"Because x.Concat cannot round or branch", "Because scripts are faster", "Because markers only render numbers"}, Correct: 0, Why: "Formatting needs rounding and conditionals — a program. The marker set covers state, bindings and structure; everything else is the escape hatch, and the boundary is deliberate."},
+		{Question: "What does the display signal hold?", Options: []string{"The raw count", "The formatted string — the script writes it, x.Text renders it", "A DOM node"}, Correct: 1, Why: "display is a plain string signal. The script computes the formatted text and writes it; the marker subscribes and renders — the script never touches the DOM."},
+	}, Bonus: true, Requires: []string{"clicker-3"}},
+	"clicker-5": {Name: "The Save", Title: "Nothing lost", Flavor: "localStorage through the escape hatch: reload and it remembers.", Objectives: []string{"the load", "the save"}, Quizzes: []quizSpec{
+		{Question: "Why does the static markup show 0 even though the save has 500?", Options: []string{"Because the build renders the initial value — the script updates it after load", "Because localStorage is cleared on load", "Because x.Text cannot show saved values"}, Correct: 0, Why: "Markers render build-time values into the HTML; the generated script keeps them in sync. The load overwrites the signal after the page is up — before the first tick, so nothing is lost."},
+		{Question: "What is the one rule that keeps the save from corrupting?", Options: []string{"Save in a database", "Load before the first write, save on every change", "Never reload the page"}, Correct: 1, Why: "Load before anything writes, write after everything changes. localStorage is synchronous and survives reloads — the whole game fits in one key."},
+	}, Bonus: true, Requires: []string{"clicker-4"}},
+	"clicker-6": {Name: "The Twin", Title: "The same game in Go", Flavor: "The clicker on the WASM path — the decision table's loudest example.", Objectives: []string{"the reactive state", "the wasm loop", "the module kept alive"}, Quizzes: []quizSpec{
+		{Question: "What is the markup's role in the wasm version?", Options: []string{"Generated by Go at runtime", "Written by hand, hydrated by the module — the data-* contract", "None — the module builds its own DOM"}, Correct: 1, Why: "The page renders the markup; the module finds it by the data-* attributes and attaches behaviour. One source of markup, surgical updates — the pattern every wasm demo follows."},
+		{Question: "Why does main end with select {}?", Options: []string{"To sleep between ticks", "To keep the module alive — returning would tear down every handler", "To wait for user input"}, Correct: 1, Why: "When main returns, the WASM instance exits and every handler dies with it. select {} blocks forever, keeping the click handler and the interval alive."},
+	}, Bonus: true, Requires: []string{"clicker-5"}},
+	"clicker-7": {Name: "The Launch", Title: "Ship it", Flavor: "The build directory is the site — the blog's recipe, made concrete.", Objectives: []string{"the workflow", "the deploy"}, Quizzes: []quizSpec{
+		{Question: "What does the workflow upload?", Options: []string{"The Go source", "The build/ directory — the static site", "The wasm modules only"}, Correct: 1, Why: "upload-pages-artifact packages build/ as the pages artifact; deploy-pages publishes it. The site is plain HTML, CSS and a little JavaScript — no runtime to install."},
+		{Question: "Why does the game work under /repo/ only with RelativeURLs?", Options: []string{"GitHub Pages requires it", "Absolute URLs point at the domain root, not the repo's subpath", "It doesn't — only the stylesheet needs it"}, Correct: 1, Why: "Project pages live under /repo/; a literal /style/style.css points at the domain root. RelativeURLs makes every link resolve from the page's own directory, so one build works anywhere."},
+	}, Bonus: true, Requires: []string{"clicker-6"}},
+}
+
+// clickerSteps is the clicker line's nav entries, in order.
+var clickerSteps = []templates.NavItem{
+	{Label: "1. The button", Path: "tutorial/clicker/1-the-button/"},
+	{Label: "2. The clicker", Path: "tutorial/clicker/2-the-clicker/"},
+	{Label: "3. The upgrades", Path: "tutorial/clicker/3-the-upgrades/"},
+	{Label: "4. The numbers", Path: "tutorial/clicker/4-the-numbers/"},
+	{Label: "5. The save", Path: "tutorial/clicker/5-the-save/"},
+	{Label: "6. The twin", Path: "tutorial/clicker/6-the-twin/"},
+	{Label: "7. The launch", Path: "tutorial/clicker/7-the-launch/"},
+}
+
+func init() {
+	for id, spec := range clickerSpecs {
+		questSpecs[id] = spec
+	}
+	questLines = append(questLines, questLine{
+		ID:     "clicker",
+		Name:   "Cookie Clicker",
+		Flavor: "Seven steps from one button to a deployed game — interactivity first, content second, the same framework from the other side.",
+		Steps:  clickerSteps,
+	})
+}
+
+// clickerPage wraps one clicker quest exactly like tutorialPage — the same
+// HUD, sidebar, pager and step progress, driven by the quest id from the path.
+templ clickerPage(c ssg.Ctx, prev, next *templates.NavItem) {
+	@tutorialPage(c, prev, next) {
+		{ children... }
+	}
+}
+
+// ClickerIndex is the orphan page at tutorial/clicker/ — the line's quests
+// start at 1-the-button, and the URL exists only because the clicker group
+// has no index of its own. A redirect is the honest content.
+templ ClickerIndex(c ssg.Ctx) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Cookie Clicker — astwerk</title>
+			<link rel="canonical" href={ "https://lukasderbaum42.github.io" + c.URL() }/>
+			<meta http-equiv="refresh" content={ "0; url=" + c.Link("tutorial/clicker/1-the-button/") }/>
+		</head>
+		<body>
+			<p>
+				The Cookie Clicker quest line starts at
+				<a href={ c.Link("tutorial/clicker/1-the-button/") }>quest 1 — the button</a>.
+			</p>
+		</body>
+	</html>
+}
+
+templ TutorialClicker1(c ssg.Ctx, prev, next *templates.NavItem) {
+	@clickerPage(c, prev, next) {
+		@questSection("clicker-1", 1) {
+			<p class="lede">
+				The blog line started with files and got to interactivity at step 9.
+				This line flips it: the game starts with a live widget. One page,
+				one button, one counter — the smallest thing a game can be, built
+				with the <code>x</code> markers from the blog's step 9.
+			</p>
+			@x.Document(clickerButtonDemo(), templates.XOptions()...)
+		}
+		@questSection("clicker-1", 2) {
+			<p><code>pages/home.templ</code> — the whole change:</p>
+			@templates.CodeBlockTempl(clickerStep1Home)
+			<p>
+				<code>x.NamedNumSignal</code> creates the state under a fixed name,
+				so scripts can reach it later; <code>x.On</code> binds the click to
+				<code>Inc(1)</code>, and <code>{ "@" }x.Text(cookies)</code> renders the
+				value and the binding that keeps it in sync — the counter is static
+				HTML that a generated script moves.
+			</p>
+			@tryit("Change Inc(1) to Inc(5) and rebuild.", "Each click adds five cookies — the counter is a signal, and the button is just an action on it.")
+		}
+	}
+}
+
+templ TutorialClicker2(c ssg.Ctx, prev, next *templates.NavItem) {
+	@clickerPage(c, prev, next) {
+		@questSection("clicker-2", 1) {
+			<p>
+				Clicking is work. The first upgrade is a script that clicks for
+				you: one cookie per second, forever. Timers are a program, not a
+				marker — this is the <em>escape hatch</em>, and the named signal
+				from step 1 is the door.
+			</p>
+			@x.Document(clickerAutoDemo(), templates.XOptions()...)
+			<p>
+				<code>cookies.get()</code> reads the signal's current value;
+				<code>cookies.set(...)</code> replaces it. Scripts and markers talk
+				to the same state object, so the counter above moves even though
+				nothing in the markup knows about the script. That is the whole
+				contract: the name is stable API.
+			</p>
+		}
+		@questSection("clicker-2", 2) {
+			@templates.CodeBlock(clickerStep2Script)
+			<p>
+				<code>setInterval</code> is the first thing the marker set has no
+				combinator for — and the design law says it shouldn't grow one.
+				This is what the escape hatch is for, and it stays the pattern for
+				everything time-based from here on.
+			</p>
+			@tryit("Make it click twice per second, then remove the script and rebuild.", "The counter grows visibly faster with the interval; without the script the button still works — the page never depended on it.")
+		}
+	}
+}
+
+templ TutorialClicker3(c ssg.Ctx, prev, next *templates.NavItem) {
+	@clickerPage(c, prev, next) {
+		@questSection("clicker-3", 1) {
+			<p>
+				One cookie per click is a sad game. Upgrades change that: each
+				purchase raises a level, every click earns <em>1 + level</em>, and
+				the next upgrade costs more. The price is <em>derived</em> — stored
+				nowhere, recomputed whenever the level changes, the memo chain from
+				the examples' forms page.
+			</p>
+			@x.Document(clickerUpgradeDemo(), templates.XOptions()...)
+			@templates.PieceTempl("The state", clickerStep3State) {
+				<p>
+					<code>level</code> is stored; <code>price</code> is a
+					<code>Computed</code> over it — <code>Add</code> then
+					<code>Mul</code>, compiled to JavaScript, re-evaluated in the
+					browser whenever the level changes. Nothing ever stores a price.
+				</p>
+			}
+		}
+		@questSection("clicker-3", 2) {
+			@templates.PieceTempl("The buy action", clickerStep3Buy) {
+				<p>
+					The click binding's gain is derived too — <code>Inc(1 + level)</code>,
+					a memo inside the action, so every purchase is felt on the next
+					click. The buy itself is <code>If</code> over a memo comparison:
+					<code>Seq</code> pays with the <em>old</em> price first, then
+					levels up — <code>Dec(price)</code> reads the memo before it
+					changes, so the wallet never dips negative. <code>Disabled</code>
+					shows the unaffordable state before the first click lands.
+				</p>
+			}
+			@tryit("Buy three upgrades, then reload the page.", "The level resets — nothing persists yet. That is exactly the gap step 5 closes.")
+		}
+	}
+}
+
+templ TutorialClicker4(c ssg.Ctx, prev, next *templates.NavItem) {
+	@clickerPage(c, prev, next) {
+		@questSection("clicker-4", 1) {
+			<p>
+				The counter passes 1000 and the game becomes a wall of digits.
+				Formatting — <code>1.2k</code>, <code>3.4M</code>, rounding — is a
+				real program, so it lives in the escape hatch: a script that writes
+				a <em>display</em> signal, and the marker renders it like any
+				other value.
+			</p>
+			@x.Document(clickerNumbersDemo(), templates.XOptions()...)
+			@templates.CodeBlock(clickerStep4Script)
+			<p>
+				<code>display</code> is an ordinary named string signal — the
+				formatter's output, nothing more. The markup binds it with
+				<code>{ "@" }x.Text(display)</code>, so the script never touches the
+				DOM: it writes state, the binding renders.
+			</p>
+		}
+		@questSection("clicker-4", 2) {
+			@templates.CodeBlock(clickerStep4Concat)
+			<p>
+				The boundary is the lesson: string <em>composition</em> is a
+				combinator (<code>x.Concat</code>), string <em>computation</em> is a
+				program. The marker set stays small because the line between them
+				is drawn here, once, deliberately.
+			</p>
+			@tryit("Add a billion branch to fmt — n >= 1e9 → (n / 1e9).toFixed(1) + \"B\".", "The display switches to B once the count passes a billion — the formatter is just a function of the signal.")
+		}
+	}
+}
+
+templ TutorialClicker5(c ssg.Ctx, prev, next *templates.NavItem) {
+	@clickerPage(c, prev, next) {
+		@questSection("clicker-5", 1) {
+			<p>
+				Reload wipes the game — cookies, upgrades, all of it. Persistence
+				is <code>localStorage</code>, and the escape hatch is the honest
+				place for it: load on boot, save on every change, three lines.
+			</p>
+			@x.Document(clickerSaveDemo(), templates.XOptions()...)
+			@templates.CodeBlock(clickerStep5Script)
+			<p>
+				The count starts where the last session left it:
+				<code>cookies.set(Number(localStorage.getItem(KEY) || "0"))</code>
+				runs before the interval starts, so the very first tick builds on
+				the saved value — and the static markup, rendered at build time,
+				still shows the initial value until the script runs.
+			</p>
+		}
+		@questSection("clicker-5", 2) {
+			<p>
+				Every tick writes back. One key, one value — the whole save game.
+				The WASM twin of this quest (<a href={ c.Link("tutorial/clicker/6-the-twin/") }>step 6</a>)
+				uses <code>wasmwrap.Storage</code> — the same two calls; this is
+				the plain-JS version, and both are the same shape.
+			</p>
+			@tryit("Bake some cookies, reload the page, and watch the counter come back.", "The load runs before the first tick, so the counter resumes where it was — localStorage survives reloads, signals do not.")
+		}
+	}
+}
+
+templ TutorialClicker6(c ssg.Ctx, prev, next *templates.NavItem) {
+	@clickerPage(c, prev, next) {
+		@questSection("clicker-6", 1) {
+			<p class="lede">
+				The same game on the WASM path — the decision table's loudest
+				example yet. The markup below is identical in spirit to step 1's;
+				only the state and the timer move into Go. <code>scripts/clicker_demo/</code>
+				is compiled to <code>clicker_demo.wasm</code> and loaded by the
+				page, exactly like the examples' demos.
+			</p>
+			<div class="demo" id="clicker">
+				<div class="counter-row">
+					<button type="button" data-bake>🍪 Bake a cookie</button>
+					<span class="counter-value" data-cookies>0</span>
+				</div>
+				<p class="demo-note">One cookie per second — the timer is a <code>wasmwrap.SetInterval</code>.</p>
+			</div>
+			@templates.WasmScript(c, "clicker_demo")
+			@templates.CodeBlock(clickerStep6Main)
+			<p>
+				<code>reactive.Num</code> is the same state model the x markers
+				compile to — this is the terminology matrix made concrete: the
+				clicker's <code>x.NamedNumSignal("cookies", 0)</code> and this
+				<code>reactive.Num(0.0)</code> are the same kind of object, one
+				written by markers and one by hand. The markup keeps the
+				<code>data-*</code> contract and <code>BindText</code> formats the
+				counter with Go's <code>fmt</code> — the stdlib, on tap.
+			</p>
+		}
+		@questSection("clicker-6", 2) {
+			<p>
+				The timer the x line kept as a script is a <code>wasmwrap.SetInterval</code>
+				here, and persistence would be <code>wasmwrap.Storage</code> — the
+				same two calls, in Go. Which path to take is the question the
+				<a href={ c.Link("docs/which-tool/") }>which tool</a> page answers;
+				this page is the same game both ways, so you can feel the
+				difference in payload: the x version is a few lines of generated
+				JavaScript, the wasm version downloads a module.
+			</p>
+		}
+		@questSection("clicker-6", 3) {
+			<p>
+				The module runs until its <code>main</code> returns — which is why
+				every demo's <code>main</code> ends in <code>select {}</code>: it
+				blocks forever, keeping the click handler and the interval alive.
+				The page never depended on the module to exist.
+			</p>
+			@tryit("Disable WebAssembly in the browser and reload.", "The demo reads as static markup: the button and the counter render, nothing moves — the page never depended on the module to exist.")
+		}
+	}
+}
+
+templ TutorialClicker7(c ssg.Ctx, prev, next *templates.NavItem) {
+	@clickerPage(c, prev, next) {
+		@questSection("clicker-7", 1) {
+			<p>
+				The game works. The build directory is the site — the same truth as
+				the blog's last step, here made concrete: one workflow file, and
+				the repo deploys itself.
+			</p>
+			<p>From this repo to the deployed game:</p>
+			@pipelineDiagram([]Stage{
+				{Name: "templ generate", Sub: "compiles .templ"},
+				{Name: "go run .", Sub: "writes build/"},
+				{Name: "upload artifact", Sub: "the workflow's job"},
+				{Name: "GitHub Pages", Sub: "served from /repo/"},
+			})
+			@templates.CodeBlock(clickerStep7Workflow)
+			<p>
+				Four steps: check out, build, upload, deploy. The workflow runs on
+				every push to <code>main</code>, and the <code>permissions</code>
+				block is the least privilege GitHub Pages needs — write the pages
+				artifact, nothing else.
+			</p>
+		}
+		@questSection("clicker-7", 2) {
+			<p>
+				One thing worth knowing before the first deploy: the layout writes
+				<code>/style/style.css</code> and <code>/tutorial/</code> — fine at
+				a domain root, wrong under a subpath (project Pages serve from
+				<code>/repo/</code>). Build with <code>RelativeURLs: true</code>
+				and resolve links through <code>Ctx.Asset</code>/<code>Ctx.Link</code>,
+				and the same build works from disk, at a localhost root, and
+				deployed — the blog's step 11, verbatim.
+			</p>
+			@tryit("Push the workflow to a GitHub repo and watch the Actions tab.", "The first run builds and deploys the game; every push after that ships it again — the build directory is the site, and the workflow is the conveyor belt.")
+		}
+	}
+}
+
+// --- The clicker line's live demos ---
+
+// clickerButtonDemo is quest 1's demo: one button, one counter.
+templ clickerButtonDemo() {
+	<div class="demo">
+		<div class="counter-row">
+			@x.El("button", x.On("click", CKCount.Inc(1))) {
+				🍪 Bake a cookie
+			}
+			<span class="counter-value">@x.Text(CKCount)</span>
+		</div>
+		<p class="demo-note">One click, one cookie. That is the whole game so far.</p>
+	</div>
+}
+
+// clickerAutoDemo is quest 2's demo: the button plus the auto-clicker script.
+// The script is the escape hatch reading the named "cookies" signal.
+templ clickerAutoDemo() {
+	<div class="demo">
+		<div class="counter-row">
+			@x.El("button", x.On("click", CKCount.Inc(1))) {
+				🍪 Bake a cookie
+			}
+			<span class="counter-value">@x.Text(CKCount)</span>
+		</div>
+		<p class="demo-note">The script below clicks once per second — watch the counter move on its own.</p>
+		<script>
+			setInterval(() => {
+				cookies.set(cookies.get() + 1);
+			}, 1000);
+		</script>
+	</div>
+}
+
+// clickerUpgradeDemo is quest 3's demo: the buy action, the price memo and
+// the guarded payment — the whole action set in one row. Buying raises the
+// level, and the click binding's gain is derived from it, so each purchase
+// visibly increases what every click earns.
+templ clickerUpgradeDemo() {
+	<div class="demo">
+		<div class="counter-row">
+			@x.El("button", x.On("click", CKCount.Inc(x.Add(CKLevel, 1)))) {
+				🍪
+			}
+			<span class="counter-value">@x.Text(CKCount)</span>
+		</div>
+		<div class="counter-row">
+			@x.El("button",
+				x.On("click", x.If(
+					x.Computed(x.Gte(CKCount, CKPrice)),
+					x.Seq(CKCount.Dec(CKPrice), CKLevel.Inc(1)),
+				)),
+				x.Disabled(x.Computed(x.Lt(CKCount, CKPrice))),
+			) {
+				Buy an upgrade —
+				@x.Text(CKPrice) 🍪
+			}
+			<span class="demo-note">level <span>@x.Text(CKLevel)</span> &middot; each click earns 1 + level</span>
+		</div>
+	</div>
+}
+
+// clickerNumbersDemo is quest 4's demo: the formatted display, written by the
+// formatter script and rendered by the marker.
+templ clickerNumbersDemo() {
+	<div class="demo">
+		<div class="counter-row">
+			@x.El("button", x.On("click", CKCount.Inc(1))) {
+				🍪
+			}
+			<span class="counter-value">@x.Text(CKDisplay)</span>
+		</div>
+		<p class="demo-note">The formatter below turns the raw count into k/M — the marker renders whatever it writes.</p>
+		<script>
+			const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M"
+				: n >= 1e3 ? (n / 1e3).toFixed(1) + "k"
+				: String(Math.floor(n));
+			setInterval(() => {
+				cookies.set(cookies.get() + 1);
+				display.set(fmt(cookies.get()));
+			}, 1000);
+		</script>
+	</div>
+}
+
+// clickerSaveDemo is quest 5's demo: load on boot, save on every tick —
+// reload the page and the counter comes back.
+templ clickerSaveDemo() {
+	<div class="demo">
+		<div class="counter-row">
+			@x.El("button", x.On("click", CKCount.Inc(1))) {
+				🍪
+			}
+			<span class="counter-value">@x.Text(CKCount)</span>
+		</div>
+		<p class="demo-note">Reload the page — the counter resumes where it was.</p>
+		<script>
+			const KEY = "cookie-clicker-save";
+			cookies.set(Number(localStorage.getItem(KEY) || "0"));
+			setInterval(() => {
+				cookies.set(cookies.get() + 1);
+				localStorage.setItem(KEY, String(cookies.get()));
+			}, 1000);
+		</script>
+	</div>
+}

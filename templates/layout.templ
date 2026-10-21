@@ -28,12 +28,19 @@ type NavGroup struct {
 	Items []NavItem
 }
 
-// Layout owns the page shell.
+// Layout owns the page shell and composes the pieces the site is built from:
+// the topbar, the sidebar (when the page has one), the footer, and the
+// scripts that genuinely span the page. Pages with a pre-main slot (the
+// tutorial's game HUD) pass it as pre — it renders directly under the
+// topbar, outside main, so sticky elements inside it stick against the page
+// height instead of the article's. Pages that replace the sidebar (the
+// tutorial's quest hub) pass it as side — it renders in the sidebar column
+// instead of Sidebar, and the page passes no sidebar.
 //
 // Every URL goes through c.Asset or c.Link rather than being written as a
 // literal "/…", because this site is served from /astwerk/ on GitHub Pages. Get
 // that wrong and every stylesheet and link 404s once deployed.
-templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
+templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup, pre []templ.Component, side ...templ.Component) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -47,9 +54,13 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 			<link rel="stylesheet" href={ c.Asset("style/style.css") }/>
 			<link rel="stylesheet" href={ c.Asset("style/code.css") }/>
 			<link rel="canonical" href={ "https://lukasderbaum42.github.io" + c.URL() }/>
+			<link rel="alternate" hreflang="en" href={ "https://lukasderbaum42.github.io" + c.Base + "/" + c.Rel() }/>
+			<link rel="alternate" hreflang="de" href={ "https://lukasderbaum42.github.io" + c.Base + "/de/" + c.Rel() }/>
 			<meta name="description" content="astwerk — a minimal, no-magic static site generator for Go and templ."/>
 			<meta property="og:title" content={ pageTitle(c.Title) }/>
 			<meta property="og:type" content="website"/>
+			<meta property="og:image" content={ "https://lukasderbaum42.github.io" + c.Base + "/public/og.svg" }/>
+			<meta name="twitter:card" content="summary_large_image"/>
 			<script>
 				// Applied before paint, so a saved preference never flashes the
 				// wrong theme or accent. Dark is the default: no key means no attribute,
@@ -64,54 +75,30 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 		</head>
 		<body>
 			<a class="skip" href="#main">Skip to content</a>
-			<header class="topbar">
-				<a class="brand" href={ c.Link("") }>
-					<span class="mark">&#9683;</span> astwerk
-				</a>
-				<nav class="topnav">
-					<a href={ c.Link("docs/") } aria-current={ ariaCurrent(c.Path, "docs") }>Docs</a>
-					<a href={ c.Link("tutorial/") } aria-current={ ariaCurrent(c.Path, "tutorial") }>Tutorial</a>
-					<a href={ c.Link("examples/") } aria-current={ ariaCurrent(c.Path, "examples") }>Examples</a>
-					<a href="https://pkg.go.dev/github.com/LukasDerBaum42/astwerk">API</a>
-					<a href="https://github.com/LukasDerBaum42/astwerk">GitHub</a>
-					<button
-						class="theme-toggle"
-						id="theme-toggle"
-						type="button"
-						aria-label="Toggle light and dark theme"
-					></button>
-				</nav>
-			</header>
-			if len(sidebar) > 0 {
+			@Topbar(c, len(sidebar) > 0)
+			if c.Locale == "de" && !Translated[c.Rel()] {
+				<div class="i18n-banner">
+					<p>
+						Diese Seite ist noch nicht übersetzt —
+						<a href={ c.InLocale("") }>English version</a>.
+					</p>
+				</div>
+			}
+			for _, p := range pre {
+				@p
+			}
+			if len(side) > 0 {
 				<div class="with-sidebar">
-					<aside class="sidebar">
-						<p class="sidebar-title">{ sidebarTitle }</p>
-						for _, group := range sidebar {
-							<nav class="sidebar-group">
-								if group.Title != "" {
-									<p class="sidebar-group-title">{ group.Title }</p>
-								}
-								for _, item := range group.Items {
-									if item.Path == c.Path {
-										<a href={ c.Link(item.Path) } class="active" aria-current="page">{ item.Label }</a>
-										if len(item.Sub) > 0 {
-											<ul class="sidebar-sub">
-												for _, sub := range item.Sub {
-													if sub.Deep {
-														<li><a class="deep" href={ templ.SafeURL(c.Link(item.Path) + sub.Anchor) }>{ sub.Label }</a></li>
-													} else {
-														<li><a href={ templ.SafeURL(c.Link(item.Path) + sub.Anchor) }>{ sub.Label }</a></li>
-													}
-												}
-											</ul>
-										}
-									} else {
-										<a href={ c.Link(item.Path) }>{ item.Label }</a>
-									}
-								}
-							</nav>
-						}
-					</aside>
+					for _, s := range side {
+						@s
+					}
+					<main id="main">
+						{ children... }
+					</main>
+				</div>
+			} else if len(sidebar) > 0 {
+				<div class="with-sidebar">
+					@Sidebar(c, sidebarTitle, sidebar)
 					<main id="main">
 						{ children... }
 					</main>
@@ -121,29 +108,8 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 					{ children... }
 				</main>
 			}
-			<footer class="footer">
-				<p>
-					astwerk is MIT licensed. This site is built with astwerk —
-					<a href="https://github.com/LukasDerBaum42/astwerk-website">its own source</a>
-					is in the repo.
-				</p>
-			</footer>
+			@Footer(c)
 			<button class="back-to-top" type="button" aria-label="Back to top">&uarr;</button>
-			<script>
-				(() => {
-					const btn = document.getElementById("theme-toggle");
-					btn.addEventListener("click", () => {
-						const light = document.documentElement.dataset.theme === "light";
-						if (light) {
-							delete document.documentElement.dataset.theme;
-							localStorage.setItem("theme", "dark");
-						} else {
-							document.documentElement.dataset.theme = "light";
-							localStorage.setItem("theme", "light");
-						}
-					});
-				})();
-			</script>
 			<script>
 				// Give every highlighted block a header with a copy button.
 				// Templ snippets carry their own header; markdown fences get one
@@ -221,45 +187,11 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 				})();
 			</script>
 			<script>
-				// Highlight the in-page heading the reader is currently at, and
-				// show a back-to-top button once they have scrolled.
-				(() => {
-					const subLinks = Array.from(document.querySelectorAll(".sidebar-sub a"));
-					const headings = subLinks
-						.map((a) => {
-							const id = (a.getAttribute("href") || "").split("#")[1];
-							return id ? document.getElementById(id) : null;
-						})
-						.filter(Boolean);
-
-					const back = document.querySelector(".back-to-top");
-
-					const setCurrent = (i) => {
-						subLinks.forEach((a, j) => a.classList.toggle("active", j === i));
-					};
-
-					const onScroll = () => {
-						if (back) {
-							back.classList.toggle("visible", window.scrollY > 400);
-						}
-						if (!headings.length) return;
-						const top = 104; // sticky topbar offset
-						let idx = -1;
-						headings.forEach((h, i) => {
-							if (h.getBoundingClientRect().top <= top) idx = i;
-						});
-						setCurrent(idx);
-					};
-
-					document.addEventListener("scroll", onScroll, { passive: true });
-					if (back) back.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
-					onScroll();
-				})();
-			</script>
-			<script>
 				// Tutorial quizzes: pick an option, see right/wrong plus the
-				// explanation. A correct answer ticks the step's progress box by
-				// reusing its change listener.
+				// explanation. A correct answer marks the quiz solved (the step
+				// progress and the game shell count solved quizzes) and is worth
+				// double XP in the game — the astwerk:quiz event carries the
+				// outcome and whether the quiz was already tried.
 				document.addEventListener("click", (e) => {
 					const btn = e.target.closest ? e.target.closest(".quiz-option, .quiz-reset") : null;
 					if (!btn) return;
@@ -269,7 +201,7 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 					if (btn.classList.contains("quiz-reset")) {
 						quiz.querySelectorAll(".quiz-option").forEach((b) => {
 							b.disabled = false;
-							b.classList.remove("right", "wrong");
+							b.classList.remove("right", "wrong", "hint");
 						});
 						const fb = quiz.querySelector(".quiz-feedback");
 						if (fb) { fb.textContent = ""; fb.classList.remove("right", "wrong"); }
@@ -277,6 +209,7 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 						if (why) why.hidden = true;
 						btn.hidden = true;
 						delete quiz.dataset.done;
+						delete quiz.dataset.solved;
 						return;
 					}
 
@@ -287,25 +220,538 @@ templ Layout(c ssg.Ctx, sidebarTitle string, sidebar []NavGroup) {
 					const why = quiz.querySelector(".quiz-why");
 					const reset = quiz.querySelector(".quiz-reset");
 
+					// The game shell scores this answer. firstTry is false after
+					// the quiz was answered once, even if a reset let it be
+					// answered again — the reset clears `done` but not `tried`.
+					const firstTry = quiz.dataset.tried !== "1";
+					quiz.dataset.tried = "1";
+
 					quiz.querySelectorAll(".quiz-option").forEach((b, i) => {
 						b.disabled = true;
 						if (i === correct) b.classList.add("right");
 					});
 					if (picked === correct) {
 						if (fb) { fb.textContent = "Correct."; fb.classList.add("right"); }
-						const box = document.querySelector(".step-progress [data-step]");
-						if (box && !box.checked) {
-							box.checked = true;
-							box.dispatchEvent(new Event("change"));
-						}
+						// Solved: the step progress and the derived completion both
+						// count quizzes by this mark.
+						quiz.dataset.solved = "1";
 					} else {
 						btn.classList.add("wrong");
-						if (fb) { fb.textContent = "Not quite — the correct answer is highlighted."; fb.classList.add("wrong"); }
+						// First wrong attempt: a hint from the explanation, so the
+						// retry is a learning step; the full "why" comes after the
+						// second attempt.
+						const tries = Number(quiz.dataset.tries || "0") + 1;
+						quiz.dataset.tries = String(tries);
+						const whyText = why ? why.textContent : "";
+						if (tries === 1 && whyText) {
+							const hint = whyText.length > 90 ? whyText.slice(0, 90).replace(/\s+\S*$/, "") + "…" : whyText;
+							if (fb) {
+								fb.textContent = "Not quite. Hint: " + hint;
+								fb.classList.add("wrong");
+							}
+						} else if (fb) {
+							fb.textContent = "Not quite — the correct answer is highlighted.";
+							fb.classList.add("wrong");
+						}
 					}
 					if (why) why.hidden = false;
 					if (reset) reset.hidden = false;
 					quiz.dataset.done = "1";
+					window.dispatchEvent(new CustomEvent("astwerk:quiz", {
+						detail: { correct: picked === correct, firstTry, quiz },
+					}));
 				});
+			</script>
+		<script>
+			// The step lab's checker (06-step-lab.md): vanilla, keyed off the
+			// frame's [data-lab-slot] widgets. Each slot declares its check chain —
+			// pick (the chosen candidate is the answer), shape (the declared
+			// form), render (the value substituted into the slot's template line,
+			// normalized and compared to the expected rendered output), relate (a
+			// named relationship to another slot or the quest's context). The
+			// canonical answer is only ever the reveal and the render
+			// comparison's source — never a raw string match. Every correct
+			// slot dispatches astwerk:lab; the game shell scores it.
+			(() => {
+				const frame = document.querySelector("[data-lab]");
+				if (!frame) return;
+
+				const shapeForms = {
+					identifier: (v) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(v),
+					int: (v) => /^\d+$/.test(v),
+					path: (v) => v.length > 0 && !v.startsWith("/") && v.trim() === v,
+					slug: (v) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(v),
+					file: (v) => /^[a-z0-9][a-z0-9._-]*$/.test(v),
+					quoted: (v) => /^(["']).*\1$/.test(v),
+					flag: (v) => /^--?[a-z0-9][a-z0-9-]*$/.test(v),
+				};
+				const norm = (s) => (s || "").trim().replace(/\s+/g, " ");
+				const slots = Array.from(frame.querySelectorAll("[data-lab-slot]"));
+				// A slot may appear twice in a file (the signal name is both the
+				// variable and the string) — one key, one reward, one verdict.
+				const unique = [...new Set(slots.map((s) => s.dataset.labSlot))];
+				const group = (slot) => slots.filter((s) => s.dataset.labSlot === slot.dataset.labSlot);
+				const fileOf = (slot) => slot.closest("[data-lab-file]");
+				// Order-mode files: the whole change scrambled — one practice
+				// unit per file, marked by its own state.
+				const orderFiles = Array.from(frame.querySelectorAll("[data-lab-order-file]"));
+
+				const verdict = (file) => {
+					const v = file && file.querySelector("[data-verdict]");
+					if (!v) return;
+					const keys = [...new Set(Array.from(file.querySelectorAll("[data-lab-slot]")).map((s) => s.dataset.labSlot))];
+					const ok = keys.filter((k) => slots.find((s) => s.dataset.labSlot === k).dataset.state === "ok").length;
+					if (keys.length && ok === keys.length) {
+						v.textContent = ok + " of " + keys.length + " checks pass";
+						v.classList.add("ok");
+					}
+				};
+				const progress = () => {
+					const p = frame.querySelector("[data-lab-progress]");
+					if (!p) return;
+					const okFill = unique.filter((k) => slots.find((s) => s.dataset.labSlot === k).dataset.state === "ok").length;
+					const okOrder = orderFiles.filter((f) => f.dataset.state === "ok").length;
+					p.textContent = (okFill + okOrder) + "/" + (unique.length + orderFiles.length) + " slots";
+				};
+				const fire = (slot, correct, peek, reveal) => {
+					window.dispatchEvent(new CustomEvent("astwerk:lab", {
+						detail: { quest: frame.dataset.labQuest, slot: slot.dataset.labSlot, correct, peek: !!peek, reveal: !!reveal },
+					}));
+				};
+				const fireOrder = (file, peek, reveal) => {
+					window.dispatchEvent(new CustomEvent("astwerk:lab", {
+						detail: { quest: frame.dataset.labQuest, slot: file.dataset.labOrderFile, correct: true, peek: !!peek, reveal: !!reveal },
+					}));
+				};
+
+				// --- Order mode: the whole change, scrambled. The reader moves
+				// the chips; a line is in place when its position matches its
+				// canonical index — the verdict is about the order, never text.
+				const orderLines = (file) => Array.from(file.querySelectorAll("[data-order-pos]"));
+				const orderInPlace = (file) => {
+					const lines = orderLines(file);
+					return lines.length > 0 && lines.every((l, i) => Number(l.dataset.orderPos) === i);
+				};
+				const orderVerdict = (file) => {
+					const v = file.querySelector("[data-verdict]");
+					const lines = orderLines(file);
+					const ok = lines.filter((l, i) => Number(l.dataset.orderPos) === i).length;
+					lines.forEach((l, i) => l.classList.toggle("in-place", Number(l.dataset.orderPos) === i));
+					const wasOk = file.dataset.state === "ok";
+					file.dataset.state = ok === lines.length && lines.length ? "ok" : "bad";
+					if (v) {
+						if (ok === lines.length && lines.length) {
+							v.textContent = ok + " of " + lines.length + " lines in place — the whole change is right.";
+							v.classList.add("ok");
+						} else {
+							v.textContent = ok + " of " + lines.length + " lines in place — move the ones that don't fit.";
+						}
+					}
+					// The award lands the moment the order first becomes right —
+					// dragging or the buttons alone complete the exercise; Check
+					// then only reveals what's still off.
+					if (ok === lines.length && lines.length && !wasOk) fireOrder(file);
+					progress();
+					return ok === lines.length && lines.length;
+				};
+				const moveLine = (line, dir) => {
+					const file = line.closest("[data-lab-order-file]");
+					const list = file.querySelector(".lab-order-list");
+					const lines = orderLines(file);
+					const i = lines.indexOf(line);
+					const j = i + dir;
+					if (j < 0 || j >= lines.length) return;
+					if (dir < 0) list.insertBefore(line, lines[j]);
+					else list.insertBefore(lines[j], line);
+					orderVerdict(file);
+				};
+				const shuffleOrder = (file) => {
+					const list = file.querySelector(".lab-order-list");
+					const lines = orderLines(file);
+					for (let i = lines.length - 1; i > 0; i--) {
+						const j = Math.floor(Math.random() * (i + 1));
+						[lines[i], lines[j]] = [lines[j], lines[i]];
+					}
+					lines.forEach((l) => list.appendChild(l));
+					delete file.dataset.state;
+					const v = file.querySelector("[data-verdict]");
+					if (v) { v.textContent = ""; v.classList.remove("ok"); }
+					progress();
+				};
+				const sortOrder = (file) => {
+					const list = file.querySelector(".lab-order-list");
+					orderLines(file)
+						.sort((a, b) => Number(a.dataset.orderPos) - Number(b.dataset.orderPos))
+						.forEach((l) => list.appendChild(l));
+				};
+
+				const checkSlot = (slot) => {
+					const value = slot.value.trim();
+					const checks = (slot.dataset.check || "").split(",").map((s) => s.trim()).filter(Boolean);
+					for (const kind of checks) {
+						if (kind === "pick") {
+							// A pick's candidates are the vocabulary — the chosen
+							// chip must be the canonical one.
+							if (value !== slot.dataset.canonical) {
+								return { ok: false, msg: "That's not it. " + (slot.dataset.hint || "") };
+							}
+						}
+						if (kind === "shape") {
+							const form = shapeForms[slot.dataset.form || ""];
+							if (form && !form(value)) {
+								return { ok: false, msg: "That doesn't look like a " + (slot.dataset.form || "value") + ". " + (slot.dataset.hint || "") };
+							}
+						}
+						if (kind === "line") {
+							// A whole-line slot: the tokens must match — spacing, quotes
+							// and formatting never need to be exact, the mechanism does.
+							if (!value) return { ok: false, msg: "The line is empty — write it first." };
+							if (!sameLine(value, slot.dataset.canonical)) {
+								return { ok: false, msg: "Not quite — the mechanism's tokens differ. " + (slot.dataset.hint || "") };
+							}
+						}
+						if (kind === "render") {
+							if (!value) return { ok: false, msg: "The slot is empty — type your answer first." };
+							const rendered = slot.dataset.renderTpl.replace("__SLOT__", value);
+							if (norm(rendered) !== norm(slot.dataset.renderExpected)) {
+								return { ok: false, msg: "Your line renders: " + rendered + " — the expected result shows: " + slot.dataset.renderExpected + ". " + (slot.dataset.hint || "") };
+							}
+						}
+						if (kind === "relate") {
+							let withVal = slot.dataset.relateWith || "";
+							const m = withVal.match(/^\{\{(.+)\}\}$/);
+							if (m) {
+								const other = frame.querySelector('[data-lab-slot="' + m[1] + '"]');
+								withVal = other ? other.value.trim() : "";
+							}
+							const ok = slot.dataset.relateKind === "neq" ? value !== withVal
+								: slot.dataset.relateKind === "contains" ? value.includes(withVal)
+								: value === withVal;
+							if (!ok) {
+								return { ok: false, msg: (slot.dataset.relateLabel || "That breaks a relationship the quest needs.") + " " + (slot.dataset.hint || "") };
+							}
+						}
+					}
+					return { ok: true, msg: "" };
+				};
+
+				// sameLine compares two code lines by tokens — identifiers, numbers
+				// and string contents — so whitespace, quotes and formatting never
+				// need to match exactly: the mechanism does.
+				const tokenize = (s) => {
+					const out = [];
+					const re = /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[A-Za-z_][A-Za-z0-9_]*|\d+(?:\.\d+)?|[^\sA-Za-z0-9_]/g;
+					let m;
+					while ((m = re.exec(s))) {
+						let t = m[0];
+						if (t.length > 1 && ((t[0] === '"' && t[t.length - 1] === '"') || (t[0] === "'" && t[t.length - 1] === "'"))) {
+							t = t.slice(1, -1);
+						}
+						out.push(t);
+					}
+					return out;
+				};
+				const sameLine = (a, b) => {
+					const ta = tokenize(a);
+					const tb = tokenize(b);
+					if (ta.length !== tb.length) return false;
+					return ta.every((t, i) => t === tb[i]);
+				};
+
+				// setSlotValue writes a slot's value — a typed input's or a pick's
+				// chosen chip — and updates the pick's highlighting and the live
+				// preview.
+				const updateLive = (slot) => {
+					const el = frame.querySelector('[data-lab-live="' + slot.dataset.labSlot + '"]');
+					if (!el || !slot.dataset.renderTpl) return;
+					const v = (slot.value || "").trim();
+					el.textContent = v ? slot.dataset.renderTpl.replace("__SLOT__", v) : "";
+				};
+				const setSlotValue = (slot, v) => {
+					slot.value = v;
+					slot.querySelectorAll("[data-lab-option]").forEach((b) => {
+						b.classList.toggle("picked", b.dataset.labOption === v);
+					});
+					updateLive(slot);
+				};
+
+				// apply grades one slot. With reveal, a wrong or empty answer is
+				// answered: the canonical fills in with the why — the Check button
+				// teaches, it doesn't just grade. Without reveal (typing, picking,
+				// Enter) a wrong answer shows the hint and stays editable.
+				const apply = (slot, reveal) => {
+					const v = fileOf(slot) && fileOf(slot).querySelector("[data-verdict]");
+					let msg = "";
+					const value = (slot.value || "").trim();
+					if (!value) {
+						if (!reveal) return;
+						group(slot).forEach((s) => {
+							setSlotValue(s, s.dataset.canonical);
+							s.dataset.state = "ok";
+							s.classList.toggle("ok", true);
+							s.classList.toggle("bad", false);
+						});
+						fire(slot, true, false, true);
+						msg = "The answer is: " + slot.dataset.canonical + ". " + (slot.dataset.hint || "");
+					} else {
+						const r = checkSlot(slot);
+						group(slot).forEach((s) => {
+							s.dataset.state = r.ok ? "ok" : "bad";
+							s.classList.toggle("ok", r.ok);
+							s.classList.toggle("bad", !r.ok);
+							s.setAttribute("aria-invalid", String(!r.ok));
+						});
+						if (r.ok) {
+							// A value that renders identically is correct, however it was
+							// typed — the canonical answer never entered the comparison.
+							fire(slot, true);
+						} else if (reveal) {
+							group(slot).forEach((s) => {
+								setSlotValue(s, s.dataset.canonical);
+								s.dataset.state = "ok";
+								s.classList.toggle("ok", true);
+								s.classList.toggle("bad", false);
+							});
+							fire(slot, true, false, true);
+							msg = "Not quite. The answer is: " + slot.dataset.canonical + ". " + (slot.dataset.hint || "");
+						} else {
+							fire(slot, false);
+							msg = r.msg;
+						}
+					}
+					verdict(fileOf(slot));
+					progress();
+					// The per-slot feedback wins over the file's count summary.
+					if (msg && v) v.textContent = msg;
+				};
+
+				const reset = () => {
+					slots.forEach((slot) => {
+						setSlotValue(slot, "");
+						delete slot.dataset.state;
+						slot.classList.remove("ok", "bad");
+						slot.removeAttribute("aria-invalid");
+					});
+					orderFiles.forEach(shuffleOrder);
+					frame.querySelectorAll("[data-verdict]").forEach((v) => (v.textContent = ""));
+					progress();
+				};
+				const peek = () => {
+					slots.forEach((slot) => {
+						if (slot.dataset.state === "ok") return;
+						group(slot).forEach((s) => {
+							setSlotValue(s, s.dataset.canonical);
+							s.dataset.state = "ok";
+							s.classList.toggle("ok", true);
+							s.classList.toggle("bad", false);
+						});
+						fire(slot, true, true);
+					});
+					orderFiles.forEach((file) => {
+						if (file.dataset.state === "ok") return;
+						sortOrder(file);
+						file.dataset.state = "ok";
+						fireOrder(file, true);
+					});
+					frame.querySelectorAll("[data-verdict]").forEach((v) => (v.textContent = "Peeked — every slot revealed. Nothing is ever deducted."));
+					progress();
+				};
+
+				// Drag to reorder: pointer-drag the handle, the line follows. The
+				// up/down buttons stay for keyboard and coarse pointers.
+				const drag = { line: null, file: null };
+				const endDrag = () => {
+					if (drag.line) drag.line.classList.remove("dragging");
+					drag.line = null;
+					drag.file = null;
+				};
+				orderFiles.forEach((file) => {
+					file.querySelectorAll("[data-order-handle]").forEach((handle) => {
+						handle.addEventListener("pointerdown", (e) => {
+							e.preventDefault();
+							drag.line = handle.closest("[data-order-pos]");
+							drag.file = file;
+							drag.line.classList.add("dragging");
+						});
+					});
+				});
+				document.addEventListener("pointermove", (e) => {
+					if (!drag.line) return;
+					const over = document.elementFromPoint(e.clientX, e.clientY);
+					const target = over && over.closest("[data-order-pos]");
+					if (!target || target === drag.line) return;
+					const list = drag.file.querySelector(".lab-order-list");
+					const lines = orderLines(drag.file);
+					const i = lines.indexOf(drag.line);
+					const j = lines.indexOf(target);
+					if (i < j) list.insertBefore(drag.line, target.nextSibling);
+					else list.insertBefore(drag.line, target);
+					orderVerdict(drag.file);
+				});
+				document.addEventListener("pointerup", endDrag);
+				document.addEventListener("pointercancel", endDrag);
+
+				frame.addEventListener("click", (e) => {
+					// Picks: dropping in a chip is the answer — apply it.
+					const opt = e.target.closest ? e.target.closest("[data-lab-option]") : null;
+					if (opt) {
+						const slot = opt.closest("[data-lab-slot]");
+						if (slot && slot.value !== opt.dataset.labOption) {
+							// The same key may render twice (the signal name is both
+							// the variable and the string) — keep every chip row in
+							// step, one pick, one state.
+							group(slot).forEach((s) => setSlotValue(s, opt.dataset.labOption));
+							if (slot.value.trim()) apply(slot);
+						}
+						return;
+					}
+					const btn = e.target.closest ? e.target.closest("[data-lab-check], [data-lab-reset], [data-lab-peek]") : null;
+					if (btn) {
+						if (btn.matches("[data-lab-check]")) {
+							// Check grades everything — and answers the ones that are
+							// wrong or empty, so the lab teaches, never blocks.
+							slots.forEach((slot) => apply(slot, true));
+							orderFiles.forEach((file) => {
+								if (!orderVerdict(file)) {
+									sortOrder(file);
+									file.dataset.state = "ok";
+									fireOrder(file, false, true);
+								}
+							});
+						} else if (btn.matches("[data-lab-reset]")) {
+							reset();
+						} else {
+							peek();
+						}
+						return;
+					}
+					const up = e.target.closest ? e.target.closest("[data-order-up]") : null;
+					if (up) { moveLine(up.closest("[data-order-pos]"), -1); return; }
+					const down = e.target.closest ? e.target.closest("[data-order-down]") : null;
+					if (down) { moveLine(down.closest("[data-order-pos]"), 1); }
+				});
+				frame.addEventListener("change", (e) => {
+					const slot = e.target.closest ? e.target.closest("[data-lab-slot]") : null;
+					if (slot && slot.value.trim()) apply(slot);
+				});
+				frame.addEventListener("input", (e) => {
+					const slot = e.target.closest ? e.target.closest("[data-lab-slot]") : null;
+					if (slot) updateLive(slot);
+				});
+				frame.addEventListener("keydown", (e) => {
+					if (e.key === "Enter" && e.target.matches && e.target.matches("[data-lab-slot]")) apply(e.target);
+				});
+				frame.querySelectorAll("[data-lab-tab]").forEach((tab) => {
+					tab.addEventListener("click", () => {
+						frame.querySelectorAll("[data-lab-tab]").forEach((t) => t.classList.toggle("on", t === tab));
+						frame.querySelectorAll("[data-lab-file]").forEach((f) => {
+							f.hidden = f.dataset.labFile !== tab.dataset.labTab;
+						});
+					});
+				});
+				frame.querySelectorAll("[data-lab-file]").forEach((f, i) => { f.hidden = i !== 0; });
+				const firstTab = frame.querySelector("[data-lab-tab]");
+				if (firstTab) firstTab.classList.add("on");
+				progress();
+			})();
+		</script>
+			<script>
+				// Site search: the index is generated at build time (search/index.json),
+				// so this is a fetch plus a rank — no search service, no Node. Ranking is
+				// fuzzy: exact substring matches first, then subsequence matches with
+				// bonuses for consecutive hits and word starts ("col" finds collection).
+				(() => {
+					const input = document.getElementById("site-search");
+					const box = document.getElementById("search-results");
+					if (!input || !box) return;
+					let index = null;
+
+					const load = async () => {
+						if (!index) index = await (await fetch(input.dataset.index)).json();
+						return index;
+					};
+
+					const score = (hay, q) => {
+						let total = 0, from = 0, prev = -2, streak = 0;
+						for (let i = 0; i < q.length; i++) {
+							let found = -1;
+							for (let j = from; j < hay.length; j++) {
+								if (hay[j] === q[i]) { found = j; break; }
+							}
+							if (found < 0) return -1;
+							streak = found === prev + 1 ? streak + 1 : 0;
+							if (i === 0 || hay[found - 1] === " " || hay[found - 1] === "/") total += 2;
+							total += 1 + streak;
+							from = found + 1;
+							prev = found;
+						}
+						return total;
+					};
+
+					const render = (entries) => {
+						box.innerHTML = "";
+						for (const e of entries.slice(0, 8)) {
+							const a = document.createElement("a");
+							a.href = input.dataset.prefix + e.path;
+							const t = document.createElement("span");
+							t.className = "search-hit-title";
+							t.textContent = e.title;
+							a.appendChild(t);
+							if (e.description) {
+								const d = document.createElement("span");
+								d.className = "search-hit-desc";
+								d.textContent = e.description;
+								a.appendChild(d);
+							}
+							box.appendChild(a);
+						}
+						box.hidden = entries.length === 0;
+					};
+
+					input.addEventListener("input", async () => {
+						const q = input.value.trim().toLowerCase();
+						if (q.length < 2) { box.hidden = true; return; }
+						try {
+							const all = await load();
+							const hits = all.map((e) => {
+								const title = (e.title || "").toLowerCase();
+								const full = (title + " " + (e.description || "") + " " + (e.headings || "")).toLowerCase();
+								const sTitle = score(title, q);
+								const sFull = score(full, q);
+								const rank = (sTitle < 0 ? 0 : sTitle * 3) + (sFull < 0 ? 0 : sFull);
+								return { e, rank, exact: full.includes(q) };
+							}).filter((h) => h.rank > 0)
+								.sort((a, b) => (b.exact - a.exact) || (b.rank - a.rank))
+								.map((h) => h.e);
+							render(hits);
+						} catch { box.hidden = true; }
+					});
+					document.addEventListener("click", (e) => {
+						if (!e.target.closest(".search")) box.hidden = true;
+					});
+					document.addEventListener("keydown", (e) => {
+						// "/" focuses the search box from anywhere; Escape closes it.
+						if (e.key === "/" && !e.target.closest("input, textarea, select")) {
+							e.preventDefault();
+							input.focus();
+							input.select();
+						} else if (e.key === "Escape") {
+							box.hidden = true;
+							input.blur();
+						}
+					});
+				})();
+			</script>
+			<script>
+				// The language dropdown navigates to the other locale's version of
+				// this page — the URLs come from Ctx.InLocale at build time.
+				(() => {
+					const sel = document.getElementById("lang-select");
+					if (!sel) return;
+					sel.addEventListener("change", () => {
+						if (sel.value) window.location.href = sel.value;
+					});
+				})();
 			</script>
 		</body>
 	</html>

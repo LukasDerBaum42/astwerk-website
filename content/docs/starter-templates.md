@@ -1,7 +1,7 @@
 +++
 Title = "Starter templates"
-Description = "Seventeen copyable .templ files. Copied, never imported."
-Order = 80
+Description = "Thirteen copyable .templ files. Copied, never imported."
+Order = 210
 Group = "Reference"
 +++
 
@@ -21,17 +21,12 @@ update can't break them.
 
 ## Documentation
 
-### The x widgets
+### Client-side add-ons
 
-`widgets/` uses [`x`](../x/) — a real import, so unlike the placeholder paths it
-needs no rewriting. Three rules:
-
-- **Wrap the page content in `x.Document`.** That is what emits the generated
-  script; outside it the widgets still render, just statically.
-- **Name anything a script reads** with `x.Named`, so the script can call
-  `count.get()`.
-- **Treat a `<script>` as the escape hatch** for anything a combinator can't
-  say — see `widgets/todo.templ`.
+The reactive page and widgets (`pages/reactive.templ`, `widgets/`) live in
+[astwerk-live](https://github.com/LukasDerBaum42/astwerk-live) — copy them from
+its `starter/` on top of these files. They use `x`, which, unlike the
+placeholder paths, is a real import and needs no rewriting.
 
 ### The files
 
@@ -46,10 +41,6 @@ needs no rewriting. Three rules:
 | `pages/home.templ` | front page, near-empty on purpose |
 | `pages/about.templ` | a plain one-off page |
 | `pages/not_found.templ` | 404 page, with wiring instructions |
-| `pages/reactive.templ` | a page of `widgets/`, wrapped in `x.Document` |
-| `widgets/counter.templ` | counter with increment/reset, a toggle-`When` section and a title effect |
-| `widgets/todo.templ` | two-way input + keyed list, with the script escape hatch for add |
-| `widgets/price.templ` | computed value over two two-way number inputs |
 | `wasm/wasm_script.templ` | loads a `.wasm` build plus `wasm_exec.js` |
 | `wasm/canvas_host.templ` | sized `<canvas>` paired with its script |
 | `meta/seo_head.templ` | description, Open Graph and Twitter tags |

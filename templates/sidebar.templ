@@ -1,0 +1,112 @@
+package templates
+
+import "github.com/LukasDerBaum42/astwerk/ssg"
+
+// Sidebar owns the docs navigation: the groups, the "on this page" sub-links,
+// the mobile drawer and overlay, and the two scripts that make it behave —
+// the drawer script and the scroll-spy (which also runs the back-to-top
+// button, its other half).
+//
+// The active entry is matched against c.Rel() — the path with the locale
+// segment stripped — so the highlight, aria-current and sub-links work the
+// same in the base tree and under /de/ (issue 07-1d).
+templ Sidebar(c ssg.Ctx, title string, sidebar []NavGroup) {
+	if len(sidebar) > 0 {
+		<div class="sidebar-overlay" id="sidebar-overlay"></div>
+		<aside class="sidebar" id="sidebar">
+			<p class="sidebar-title">{ title }</p>
+			for _, group := range sidebar {
+				<nav class="sidebar-group">
+					if group.Title != "" {
+						<p class="sidebar-group-title">{ group.Title }</p>
+					}
+					for _, item := range group.Items {
+						if item.Path == c.Rel() {
+							<a href={ c.Link(item.Path) } class="active" aria-current="page">{ item.Label }</a>
+							if len(item.Sub) > 0 {
+								<ul class="sidebar-sub">
+									for _, sub := range item.Sub {
+										if sub.Deep {
+											<li><a class="deep" href={ templ.SafeURL(c.Link(item.Path) + sub.Anchor) }>{ sub.Label }</a></li>
+										} else {
+											<li><a href={ templ.SafeURL(c.Link(item.Path) + sub.Anchor) }>{ sub.Label }</a></li>
+										}
+									}
+								</ul>
+							}
+						} else {
+							<a href={ c.Link(item.Path) }>{ item.Label }</a>
+						}
+					}
+				</nav>
+			}
+		</aside>
+		<script>
+			// Mobile docs drawer: the sidebar slides in from the left under
+			// 860px; the menu button, overlay, Escape and any sidebar link
+			// all close it again. On open, the active entry is scrolled into
+			// view within the drawer — the drawer starts where the reader is.
+			(() => {
+				const btn = document.getElementById("docs-menu");
+				if (!btn) return;
+				const close = () => {
+					document.body.classList.remove("sidebar-open");
+					btn.setAttribute("aria-expanded", "false");
+				};
+				btn.addEventListener("click", () => {
+					const open = document.body.classList.toggle("sidebar-open");
+					btn.setAttribute("aria-expanded", String(open));
+					if (open) {
+						document.querySelector(".sidebar a.active")?.scrollIntoView({ block: "nearest" });
+					}
+				});
+				const overlay = document.getElementById("sidebar-overlay");
+				if (overlay) overlay.addEventListener("click", close);
+				document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+				document.querySelectorAll(".sidebar a").forEach((a) => a.addEventListener("click", close));
+			})();
+		</script>
+		<script>
+			// Scroll-spy: highlight the in-page heading the reader is at, keep
+			// the active sub-link in view *inside the sidebar* (the sidebar
+			// scrolls itself once the page can't), and show the back-to-top
+			// button after a scroll.
+			(() => {
+				const subLinks = Array.from(document.querySelectorAll(".sidebar-sub a"));
+				const headings = subLinks
+					.map((a) => {
+						const id = (a.getAttribute("href") || "").split("#")[1];
+						return id ? document.getElementById(id) : null;
+					})
+					.filter(Boolean);
+
+				const back = document.querySelector(".back-to-top");
+
+				const setCurrent = (i) => {
+					subLinks.forEach((a, j) => a.classList.toggle("active", j === i));
+					if (i >= 0) subLinks[i].scrollIntoView({ block: "nearest" });
+				};
+
+				const onScroll = () => {
+					if (back) {
+						back.classList.toggle("visible", window.scrollY > 400);
+					}
+					if (!headings.length) return;
+					const top = 104; // sticky topbar offset
+					let idx = -1;
+					headings.forEach((h, i) => {
+						if (h.getBoundingClientRect().top <= top) idx = i;
+					});
+					setCurrent(idx);
+				};
+
+				document.addEventListener("scroll", onScroll, { passive: true });
+				if (back) back.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+				// The page starts at the top: bring the active entry — the page
+				// the reader just navigated to — into view within the sidebar.
+				document.querySelector(".sidebar a.active")?.scrollIntoView({ block: "nearest" });
+				onScroll();
+			})();
+		</script>
+	}
+}

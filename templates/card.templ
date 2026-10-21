@@ -1,0 +1,10 @@
+package templates
+
+// Card is the shared link-card used by the home page's grids and the
+// examples overview — one visual unit, two callers.
+templ Card(title string, tag string, body string, href string) {
+	<a class="card" href={ href }>
+		<h3>{ title } <code>{ tag }</code></h3>
+		<p>{ body }</p>
+	</a>
+}
